@@ -114,7 +114,14 @@ export default function Partida() {
             .filter((e) => e.miembros.length < e.cupoMaximo)
             .sort((a, b) => a.miembros.length - b.miembros.length)[0];
           if (!libre) throw new Error('TODOS LOS EQUIPOS ESTÁN LLENOS');
-          mio = await unirseAEquipo(libre.id, userId);
+          try {
+            mio = await unirseAEquipo(libre.id, userId);
+          } catch (e) {
+            // 403: ya no está en la sala (un invitado que recarga sale de ella)
+            if (!e.esProhibido) throw e;
+            if (vivo) navegar('/home', { replace: true, state: { aviso: 'Saliste de la sala' } });
+            return;
+          }
         }
         if (!vivo) return;
         setEquipo(mio);

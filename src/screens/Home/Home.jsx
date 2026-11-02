@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SalaCard, { codigoDe } from './SalaCard';
 import Icono from './Iconos';
 import Ranking from './Ranking';
@@ -31,6 +31,7 @@ const TABS = [
 
 export default function Home() {
   const navegar = useNavigate();
+  const avisoAlEntrar = useLocation().state?.aviso;
   const userId = Sesion.userId;
   const username = Sesion.username;
 
@@ -63,6 +64,13 @@ export default function Home() {
   }, []);
 
    useTopic(topics.salas(), setSalas);
+
+  // Aviso de la pantalla de la que viene; se borra del historial para que no salga otra vez al recargar
+  useEffect(() => {
+    if (!avisoAlEntrar) return;
+    avisar(avisoAlEntrar);
+    window.history.replaceState(null, '');
+  }, [avisoAlEntrar]);
 
   useEffect(() => {
     if (userId) estadisticasDe(userId).then((e) => setPuntos(e.puntos)).catch(() => {});
