@@ -115,7 +115,7 @@ export default function Partida() {
             .sort((a, b) => a.miembros.length - b.miembros.length)[0];
           if (!libre) throw new Error('TODOS LOS EQUIPOS ESTÁN LLENOS');
           try {
-            mio = await unirseAEquipo(libre.id, userId);
+            mio = await unirseAEquipo(libre.id);
           } catch (e) {
             // 403: ya no está en la sala (un invitado que recarga sale de ella)
             if (!e.esProhibido) throw e;
@@ -143,14 +143,14 @@ export default function Partida() {
       const m = await gameplayApi.mapa(matchId);
       setMapa(m);
       try {
-        const lista = await gameplayApi.posiciones(matchId, eqId, userId);
+        const lista = await gameplayApi.posiciones(matchId, eqId);
         if (!lista.some((p) => p.userId === userId)) throw Object.assign(new Error('no registrado'), { esNoEncontrado: true });
         setPosiciones(Object.fromEntries(lista.map((p) => [p.userId, p])));
       } catch (e) {
         if (e.esNoEncontrado) { setFase('esperando'); return false; } // partida no iniciada
         throw e;
       }
-      gameplayApi.registrarSesion(matchId, userId);
+      gameplayApi.registrarSesion(matchId);
       setFase('jugando');
       listarEquipos(salaId).then(setEquipos).catch(() => {});
 
@@ -160,7 +160,7 @@ export default function Partida() {
         .then((r) => { if (retoActivo(r.estado)) irAlReto(); }) // llegamos con el reto corriendo
         .catch(() => {});
 
-      gameplayApi.inventario(matchId, eqId, userId)
+      gameplayApi.inventario(matchId, eqId)
         .then((inv) => { invRef.current = inv.objetos; setInventario(inv.objetos); })
         .catch(() => {});
       gameplayApi.miRol(matchId, userId).then((r) => mostrarRol(r)).catch(() => {});
@@ -345,11 +345,11 @@ export default function Partida() {
     if (!cercano || acertijo || movRef.current || resultado) return;
     try {
       if (cercano.tipo === 'ACERTIJO') {
-        const dto = await gameplayApi.abrirAcertijo(matchId, cercano.id, userId);
+        const dto = await gameplayApi.abrirAcertijo(matchId, cercano.id);
         if (dto.resuelto) setResueltos((s) => new Set(s).add(cercano.id));
         setAcertijo(dto);
       } else if (cercano.tipo === 'LLAVE') {
-        await gameplayApi.recolectar(matchId, cercano.id, userId);
+        await gameplayApi.recolectar(matchId, cercano.id);
       } else if (cercano.tipo === 'PUERTA') {
         const llaves = inventario.length;
         avisar(llaves ? `TU EQUIPO TIENE ${llaves} LLAVE(S)` : 'LA PUERTA ESTÁ CERRADA · BUSCA LAS LLAVES');
@@ -365,7 +365,7 @@ export default function Partida() {
 
   function cerrarAcertijo() {
     if (acertijo && !resueltos.has(acertijo.componenteMapaId)) {
-      gameplayApi.cerrarAcertijo(matchId, acertijo.componenteMapaId, userId).catch(() => {});
+      gameplayApi.cerrarAcertijo(matchId, acertijo.componenteMapaId).catch(() => {});
     }
     setAcertijo(null);
   }
@@ -599,7 +599,6 @@ export default function Partida() {
         <ModalAcertijo
           dto={acertijo}
           matchId={matchId}
-          userId={userId}
           onCerrar={cerrarAcertijo}
           onResuelto={acertijoResuelto}
         />

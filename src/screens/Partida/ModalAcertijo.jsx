@@ -3,7 +3,7 @@ import Icono from '../Home/Iconos';
 import { gameplayApi } from '../../services/gameplayApi';
 import { numeroDe } from './MapaIso';
 
-export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuelto }) {
+export default function ModalAcertijo({ dto, matchId, onCerrar, onResuelto }) {
   const [valores, setValores] = useState({});
   const [resultado, setResultado] = useState(dto.resuelto ? { correcto: true, mensaje: 'TU EQUIPO YA RESOLVIÓ ESTE ACERTIJO' } : null);
   const [enviando, setEnviando] = useState(false);
@@ -23,7 +23,7 @@ export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuel
     if (!r.length) return setResultado({ correcto: false, mensaje: 'ESCRIBE UNA RESPUESTA' });
     setEnviando(true);
     try {
-      const res = await gameplayApi.enviarSolucion(matchId, dto.componenteMapaId, userId, r);
+      const res = await gameplayApi.enviarSolucion(matchId, dto.componenteMapaId, r);
       setResultado({ correcto: res.correcto, mensaje: res.mensaje.toUpperCase() });
       if (res.correcto) onResuelto(dto.componenteMapaId);
       else { setSacudir(true); setTimeout(() => setSacudir(false), 400); }

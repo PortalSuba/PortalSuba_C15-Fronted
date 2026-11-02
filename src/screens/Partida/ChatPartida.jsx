@@ -16,8 +16,8 @@ export default function ChatPartida({ matchId, equipoId, userId, abierto, onNoLe
   const [pestana, setPestana] = useState('equipo');
   const [noLeidos, setNoLeidos] = useState({ equipo: 0, partida: 0 });
 
-  const canalEquipo = useMemo(() => canales.equipo(matchId, equipoId, userId), [matchId, equipoId, userId]);
-  const canalPartida = useMemo(() => canales.partida(matchId, userId), [matchId, userId]);
+  const canalEquipo = useMemo(() => canales.equipo(matchId, equipoId), [matchId, equipoId]);
+  const canalPartida = useMemo(() => canales.partida(matchId), [matchId]);
 
   // Lo que se está viendo ya está leído
   if (abierto && noLeidos[pestana] > 0) setNoLeidos({ ...noLeidos, [pestana]: 0 });

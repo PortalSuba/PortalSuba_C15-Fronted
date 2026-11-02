@@ -1,64 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../services/authApi';
-import { salasApi } from '../../services/salasApi';
-import { topics } from '../../config';
-import { useConexion, useSubscription } from '../../hooks/useSocket';
+import { completarEntrada, entrar, hayCuenta } from '../../services/auth';
 import './Login.css';
 
 const FONDO = '/assets/fondos/Fondo_Login.jpeg';
 const LLAVE = '/assets/iconos/llave.png';
 
 const LINEA = {
-  esperando: '> ESPERANDO CREDENCIALES',
+  esperando: '> ESPERANDO IDENTIFICACIÓN',
   verificando: '> VERIFICANDO',
   ok: '> ACCESO CONCEDIDO',
 };
 
 export default function Login() {
   const navigate = useNavigate();
-  const conectado = useConexion();
-  const [usuario, setUsuario] = useState('');
-  const [clave, setClave] = useState('');
-  const [estado, setEstado] = useState('esperando');
+  const [nombre, setNombre] = useState('');
+  const [pideNombre, setPideNombre] = useState(false);
+  const [estado, setEstado] = useState('verificando');
   const [mensaje, setMensaje] = useState('');
-  const [salasActivas, setSalasActivas] = useState(null);
 
-  useEffect(() => {
-    if (authApi.sesionActual()) navigate('/home', { replace: true });
+  const accesoConcedido = useCallback(() => {
+    setEstado('ok');
+    setTimeout(() => navigate('/home', { replace: true }), 800);
   }, [navigate]);
 
-  // Contador de salas en tiempo real
+  // Al llegar: quizá venimos de vuelta del proveedor, o ya hay sesión de antes en este navegador
   useEffect(() => {
-    salasApi.listar().then((s) => setSalasActivas(s.length)).catch(() => {});
-  }, []);
-  useSubscription(topics.salas(), (salas) => setSalasActivas(salas.length));
+    if (authApi.sesionActual()) { navigate('/home', { replace: true }); return; }
+    (async () => {
+      try {
+        await completarEntrada();
+        if (!(await hayCuenta())) { setEstado('esperando'); return; }
+        if (await authApi.cargarPerfil()) accesoConcedido();
+        else { setPideNombre(true); setEstado('esperando'); }
+      } catch (err) {
+        setMensaje((err.message || 'ERROR').toUpperCase());
+        setEstado('error');
+      }
+    })();
+  }, [navigate, accesoConcedido]);
 
-  function limpiarError() {
-    if (estado === 'error') setEstado('esperando');
+  async function irAlProveedor(opciones) {
+    setEstado('verificando');
+    try {
+      await entrar(opciones);
+    } catch (err) {
+      setMensaje((err.message || 'ERROR').toUpperCase());
+      setEstado('error');
+    }
   }
 
   async function onSubmit(e) {
     e.preventDefault();
     if (estado === 'verificando' || estado === 'ok') return;
-    if (!usuario.trim()) {
-      setMensaje('INGRESE SU ID');
+    if (!pideNombre) return irAlProveedor();
+    if (!nombre.trim()) {
+      setMensaje('ELIGE UN NOMBRE');
       setEstado('error');
       return;
     }
     setEstado('verificando');
     try {
-      await authApi.login(usuario);
-      setEstado('ok');
-      setTimeout(() => navigate('/home'), 800);
+      await authApi.registrarNombre(nombre);
+      accesoConcedido();
     } catch (err) {
-      setMensaje(err.status === 409 ? 'ID EN USO' : (err.message || 'ERROR').toUpperCase());
+      setMensaje(err.status === 409 ? 'ESE NOMBRE YA ESTÁ EN USO' : (err.message || 'ERROR').toUpperCase());
       setEstado('error');
     }
   }
 
-  const linea = estado === 'error' ? `> ACCESO DENEGADO: ${mensaje}` : LINEA[estado];
-  const textoBoton = { verificando: 'VERIFICANDO...', ok: 'ACCESO CONCEDIDO' }[estado] || 'DESBLOQUEAR ACCESO';
+  const linea = estado === 'error' ? `> ACCESO DENEGADO: ${mensaje}`
+    : estado === 'esperando' && pideNombre ? '> ELIGE TU NOMBRE DE JUGADOR'
+    : LINEA[estado];
+  const textoBoton = { verificando: 'VERIFICANDO...', ok: 'ACCESO CONCEDIDO' }[estado]
+    || (pideNombre ? 'CONFIRMAR NOMBRE' : 'ENTRAR');
 
   return (
     <div className="login-root">
@@ -76,31 +92,33 @@ export default function Login() {
               <div className={`login-monitor ${estado === 'error' ? 'is-error' : ''}`}>
                 <div className="login-monitor__pantalla">
                   <p className="login-monitor__titulo">
-                    SISTEMA BLOQUEADO –<br />INGRESE CREDENCIALES
+                    {pideNombre ? <>PRIMERA VEZ –<br />ELIGE CÓMO TE VERÁN</> : <>SISTEMA BLOQUEADO –<br />IDENTIFÍCATE PARA ENTRAR</>}
                   </p>
 
-                  <label className="login-campo">
-                    <span>ID DE USUARIO</span>
-                    <input
-                      value={usuario}
-                      onChange={(e) => { setUsuario(e.target.value); limpiarError(); }}
-                      maxLength={20}
-                      autoComplete="username"
-                      autoFocus
-                      disabled={estado === 'verificando' || estado === 'ok'}
-                    />
-                  </label>
+                  {pideNombre && (
+                    <label className="login-campo">
+                      <span>NOMBRE DE JUGADOR</span>
+                      <input
+                        value={nombre}
+                        onChange={(e) => { setNombre(e.target.value); if (estado === 'error') setEstado('esperando'); }}
+                        maxLength={20}
+                        autoFocus
+                        disabled={estado === 'verificando' || estado === 'ok'}
+                      />
+                    </label>
+                  )}
 
-                  <label className="login-campo">
-                    <span>CLAVE DE ACCESO</span>
-                    <input
-                      type="password"
-                      value={clave}
-                      onChange={(e) => { setClave(e.target.value); limpiarError(); }}
-                      autoComplete="current-password"
-                      disabled={estado === 'verificando' || estado === 'ok'}
-                    />
-                  </label>
+                  <div className="login-acciones">
+                    <button type="submit" className={`login-boton is-${estado}`} disabled={estado === 'verificando'}>
+                      {textoBoton}
+                      <Candado abierto={estado === 'ok'} />
+                    </button>
+                    {!pideNombre && estado !== 'verificando' && estado !== 'ok' && (
+                      <button type="button" className="login-registro" onClick={() => irAlProveedor({ registro: true })}>
+                        ¿SIN CUENTA? CREA UNA
+                      </button>
+                    )}
+                  </div>
 
                   <p className={`login-monitor__estado is-${estado}`} role="status">
                     {linea}
@@ -123,25 +141,11 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="login-panel">
-              <button type="submit" className={`login-boton is-${estado}`} disabled={estado === 'verificando'}>
-                {textoBoton}
-                <Candado abierto={estado === 'ok'} />
-              </button>
-              <button type="button" className="login-registro" onClick={() => navigate('/registro')}>
-                ¿SIN CUENTA? REGISTRATE
-              </button>
-            </div>
           </form>
         </div>
 
         <footer className="login-footer">
           <span className="login-version">v1.0</span>
-          <span className={`login-online ${conectado ? '' : 'is-off'}`}>
-            {conectado
-              ? `SISTEMA EN LÍNEA · ${salasActivas ?? '--'} SALAS ACTIVAS`
-              : 'CONECTANDO AL SERVIDOR...'}
-          </span>
         </footer>
       </div>
     </div>

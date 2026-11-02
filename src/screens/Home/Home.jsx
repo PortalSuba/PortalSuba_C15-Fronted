@@ -10,6 +10,7 @@ import { listarSalas, crearSala, unirseASala } from '../../services/salasApi';
 import { estadisticasDe } from '../../services/estadisticasApi';
 import { canales } from '../../services/chatApi';
 import { Sesion } from '../../services/sesion';
+import { authApi } from '../../services/authApi';
 import './Home.css';
 import { topics } from '../../config';
 
@@ -41,7 +42,7 @@ export default function Home() {
   const [aviso, setAviso] = useState('');
   const [silenciado, setSilenciado] = useState(false);
   const [tabChat, setTabChat] = useState('global');
-  const canalGlobal = useMemo(() => canales.global(userId), [userId]);
+  const canalGlobal = useMemo(() => canales.global(), []);
   const [vista, setVista] = useState('salas');
   const [puntos, setPuntos] = useState(0);
   const [codigo, setCodigo] = useState(['', '', '', '']);
@@ -84,7 +85,7 @@ export default function Home() {
 
   async function entrar(sala) {
     try {
-      if (sala.anfitrionId !== userId) await unirseASala(sala.id, userId);
+      if (sala.anfitrionId !== userId) await unirseASala(sala.id);
       Sesion.guardar('salaId', sala.id);
       navegar(`/sala/${sala.id}`);
     } catch (e) {
@@ -123,9 +124,9 @@ export default function Home() {
 
     setCreando(true);
     try {
-      const sala = await crearSala(nombre, userId);
+      const sala = await crearSala(nombre);
       // El back no mete al anfitrión en la sala automáticamente: hay que unirlo
-      await unirseASala(sala.id, userId);
+      await unirseASala(sala.id);
       Sesion.guardar('salaId', sala.id);
       navegar(`/sala/${sala.id}`);
     } catch (e) {
@@ -135,8 +136,7 @@ export default function Home() {
   }
 
   function cerrarSesion() {
-    Sesion.limpiar();
-    navegar('/');
+    authApi.logout();
   }
 
   if (!userId) return null;

@@ -75,7 +75,7 @@ function Arena({ matchId, equipos, roles }) {
   const rival = equipos.find((e) => e.id !== miEquipo?.id);
   const miRol = roles[userId] ?? null;
   const { reto, misClics, presionar, demo } = useReto(matchId, {
-    userId, miEquipoId: miEquipo?.id, miRol, equipoIds: equipos.map((e) => e.id),
+    miEquipoId: miEquipo?.id, miRol, equipoIds: equipos.map((e) => e.id),
   });
   const [sonido, setSonido] = useState(true);
 

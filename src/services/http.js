@@ -1,4 +1,6 @@
 import { config } from '../config';
+import { obtenerToken } from './auth';
+import { Sesion } from './sesion';
 
 export class ApiError extends Error {
   constructor(status, mensaje) {
@@ -13,15 +15,25 @@ export class ApiError extends Error {
 
 async function request(method, path, { body, query } = {}) {
   const qs = query ? '?' + new URLSearchParams(query).toString() : '';
+  const token = await obtenerToken();
+  const headers = {
+    ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   let res;
   try {
     res = await fetch(`${config.apiUrl}${path}${qs}`, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'No se pudo conectar con el servidor');
+  }
+  if (res.status === 401 && Sesion.userId) {
+    // La sesión ya no sirve: de vuelta al inicio a entrar de nuevo
+    Sesion.limpiar();
+    window.location.assign('/');
   }
   if (res.status === 204) return null;
   const data = await res.json().catch(() => null);

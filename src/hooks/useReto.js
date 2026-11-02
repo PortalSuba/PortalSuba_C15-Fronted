@@ -12,7 +12,7 @@ export function activarDemoReto(activo = true) {
 
 export const retoActivo = (estado) => estado === 'INICIADO' || estado === 'EN_CURSO';
 
-export function useReto(matchId, { userId, miEquipoId, miRol, equipoIds = [] } = {}) {
+export function useReto(matchId, { miEquipoId, miRol, equipoIds = [] } = {}) {
   const [reto, setReto] = useState({ estado: null, segundosRestantes: null, puntajes: {}, equipoGanadorId: null });
   const [misClics, setMisClics] = useState(0);
   const estadoRef = useRef(null);
@@ -50,8 +50,8 @@ export function useReto(matchId, { userId, miEquipoId, miRol, equipoIds = [] } =
     setMisClics((n) => n + 1);
     if (demo) { sim.current?.click(miRol); return; }
     // Cada clic es una petición; el back los cuenta en paralelo sin perder ninguno
-    gameplayApi.clickReto(matchId, userId).catch(() => { /* 409: el reto terminó */ });
-  }, [demo, matchId, userId, miRol]);
+    gameplayApi.clickReto(matchId).catch(() => { /* 409: el reto terminó */ });
+  }, [demo, matchId, miRol]);
 
   return { reto, misClics, presionar, demo };
 }

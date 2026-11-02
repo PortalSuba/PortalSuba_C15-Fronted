@@ -4,6 +4,7 @@ import Icono from '../Home/Iconos';
 import { useTopic } from '../../hooks/useSocket';
 import { listarSalas, crearSala, configurarSala, unirseASala } from '../../services/salasApi';
 import { Sesion } from '../../services/sesion';
+import { authApi } from '../../services/authApi';
 import './CrearSala.css';
 import { topics } from '../../config';
 
@@ -67,9 +68,9 @@ export default function CrearSala() {
     setError('');
     setCreando(true);
     try{
-      const sala = await crearSala(nombreLimpio, userId);
-      if (jugadores !== 4) await configurarSala(sala.id, userId, NUM_EQUIPOS, jugadores);
-      await unirseASala(sala.id, userId);
+      const sala = await crearSala(nombreLimpio);
+      if (jugadores !== 4) await configurarSala(sala.id, NUM_EQUIPOS, jugadores);
+      await unirseASala(sala.id);
 
       Sesion.guardar('salaId', sala.id);
       Sesion.guardar('configSala', {
@@ -87,8 +88,7 @@ export default function CrearSala() {
   }
 
   function cerrarSesion() {
-    Sesion.limpiar();
-    navegar('/');
+    authApi.logout();
   }
 
   if (!userId) return null;

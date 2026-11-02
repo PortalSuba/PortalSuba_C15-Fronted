@@ -20,7 +20,8 @@
   --l-fuente-pixel: 'Press Start 2P', monospace;
   --l-fuente-terminal: 'VT323', monospace;
 
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   display: grid;
   place-items: center;
   background: #0d0a08;
@@ -114,6 +115,7 @@
 
 .login-monitor__pantalla {
   grid-row: 1 / 3;
+  min-width: 0; /* un mensaje largo no debe ensanchar el monitor */
   display: flex;
   flex-direction: column;
   gap: 0.55cqw;
@@ -157,13 +159,11 @@
 .login-campo input:disabled { opacity: 0.6; }
 
 .login-monitor__estado {
-  margin: auto 0 0;
+  margin: 0;
   font-family: var(--l-fuente-terminal);
   font-size: 1.5cqw;
+  line-height: 1.05;
   color: var(--l-texto-tenue);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .login-monitor__estado.is-verificando { color: #e6c36a; }
 .login-monitor__estado.is-error { color: var(--l-error); }
@@ -241,17 +241,13 @@
 }
 
 /*Panel de botones*/
-.login-panel {
-  box-sizing: border-box;
-  width: 88%;
-  padding: 0.7cqw 0.8cqw 0.6cqw;
+/* Botones dentro de la pantalla del monitor, centrados en el espacio libre */
+.login-acciones {
+  margin-block: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6cqw;
-  background: linear-gradient(#3b3631, #26221e);
-  border: 0.2cqw solid #57504a;
-  box-shadow: inset 0 0 0 0.2cqw #1a1714, 0.4cqw 0.5cqw 0 rgba(0, 0, 0, 0.55);
+  gap: 0.8cqw;
 }
 
 .login-boton {
@@ -288,7 +284,7 @@
 .login-registro {
   padding: 0;
   font-family: var(--l-fuente-pixel);
-  font-size: 0.58cqw;
+  font-size: 0.68cqw;
   color: var(--l-crema);
   background: none;
   border: none;

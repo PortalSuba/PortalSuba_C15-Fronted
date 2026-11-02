@@ -22,7 +22,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   const [copiado, setCopiado] = useState(false);
   const iniciadaRef = useRef(false);
   const cerradaRef = useRef(false);
-  const canalSala = useMemo(() => canales.sala(salaId, userId), [salaId, userId]);
+  const canalSala = useMemo(() => canales.sala(salaId), [salaId]);
 
   const config = (() => { try { return Sesion.obtener('configSala'); } catch { return null; } })();
   const esPrivada = config && (config.privada === true || String(config.visibilidad ?? '').toUpperCase() === 'PRIVADA');
@@ -50,8 +50,8 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   // la cierra). Cada conexión es una sesión nueva: hay que registrarla también al reconectar.
   const conectado = useConexion();
   useEffect(() => {
-    if (conectado && salaId && userId) registrarSesionSala(salaId, userId);
-  }, [conectado, salaId, userId]);
+    if (conectado && salaId) registrarSesionSala(salaId);
+  }, [conectado, salaId]);
 
   // Si tardó más que ese tiempo en volver, el back ya no pudo avisarle: al reconectar hay que
   // preguntar, si no queda en un lobby que ya no sirve.
@@ -134,7 +134,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (!miEquipo || ocupado) return;
     setOcupado(true); setAviso(null);
     try {
-      const d = yoListo ? await desmarcarListo(salaId, userId) : await marcarListo(salaId, userId);
+      const d = yoListo ? await desmarcarListo(salaId) : await marcarListo(salaId);
       if (d?.equipos) aplicarDetalle(d);
     } catch (e) {
       setAviso(e?.esConflicto ? 'LA PARTIDA YA INICIÓ' : 'NO SE PUDO CAMBIAR TU ESTADO');
@@ -145,7 +145,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (ocupado) return;
     setOcupado(true); setAviso(null);
     try {
-      await unirseAEquipo(equipo.id, userId);
+      await unirseAEquipo(equipo.id);
       Sesion.guardar('equipoId', equipo.id);
       const d = await detalleSala(salaId);
       aplicarDetalle(d);
