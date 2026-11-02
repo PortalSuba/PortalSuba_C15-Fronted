@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { detalleSala, marcarListo, desmarcarListo, unirseAEquipo, registrarSesionSala, salirDeSala } from '../../services/salasApi';
 import { Sesion } from '../../services/sesion';
 import { topics } from '../../config';
-import { useSubscription } from '../../hooks/useSocket';
+import { useConexion, useSubscription } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { codigoDe } from '../Home/SalaCard';
 import Chat from '../../components/Chat';
@@ -50,6 +50,27 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   useEffect(() => {
     if (salaId && userId) registrarSesionSala(salaId, userId);
   }, [salaId, userId]);
+
+  // Si se cayó la conexión, el back ya lo sacó de la sala (o la cerró si era el anfitrión) y mientras
+  // tanto no pudo avisarle: al reconectar hay que preguntar, si no queda en un lobby que ya no sirve.
+  const conectado = useConexion();
+  const yaConecto = useRef(false);
+  useEffect(() => {
+    if (!conectado) return;
+    if (!yaConecto.current) { yaConecto.current = true; return; }
+    const salirConAviso = (texto) => {
+      cerradaRef.current = true;
+      setCuenta(null);
+      setAviso(texto);
+      setTimeout(() => onVolver?.(), 2500);
+    };
+    detalleSala(salaId)
+      .then((d) => {
+        if (d?.jugadores?.includes(userId)) aplicarDetalle(d);
+        else salirConAviso('SE CAYÓ TU CONEXIÓN Y SALISTE DE LA SALA');
+      })
+      .catch((e) => { if (e?.esNoEncontrado) salirConAviso('SE CAYÓ LA CONEXIÓN Y LA SALA SE CERRÓ'); });
+  }, [conectado, salaId, userId, aplicarDetalle, onVolver]);
 
   // Cambios de la sala en vivo (entradas, equipos, listos)
   useSubscription(topics.sala(salaId), aplicarDetalle);
