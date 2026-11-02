@@ -187,7 +187,8 @@
   border: calc(var(--u) * 0.25) solid #5e5347;
   border-right: 0;
 }
-.rt-tab-chat span { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: calc(var(--u) * 0.15); }
+.rt-tab-chat .pm-badge { padding: 0 calc(var(--u) * 0.35); background: #c0392b; }
+.rt-tab-chat span:not(.pm-badge) { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: calc(var(--u) * 0.15); }
 
 /*Equipos*/
 .rt-equipo {

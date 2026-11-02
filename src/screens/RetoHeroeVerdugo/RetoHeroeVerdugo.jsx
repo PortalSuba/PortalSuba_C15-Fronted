@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icono from '../Home/Iconos';
 import { Personaje, colorDe } from '../Partida/MapaIso';
@@ -8,6 +8,7 @@ import { Sesion } from '../../services/sesion';
 import { useConexion } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { useReto, activarDemoReto, esDemoReto, retoActivo } from '../../hooks/useReto';
+import ChatPartida from '../Partida/ChatPartida';
 import './RetoHeroeVerdugo.css';
 
 const FONDO = '/assets/fondos/Fondo_Reto.jpeg';
@@ -69,25 +70,19 @@ function Arena({ matchId, equipos, roles }) {
   const userId = Sesion.userId;
   const conectado = useConexion();
   const miEquipo = equipos.find((e) => e.miembros.includes(userId));
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [chatNoLeidos, setChatNoLeidos] = useState(0);
   const rival = equipos.find((e) => e.id !== miEquipo?.id);
   const miRol = roles[userId] ?? null;
   const { reto, misClics, presionar, demo } = useReto(matchId, {
     userId, miEquipoId: miEquipo?.id, miRol, equipoIds: equipos.map((e) => e.id),
   });
   const [sonido, setSonido] = useState(true);
-  const [aviso, setAviso] = useState('');
-  const tAviso = useRef(null);
 
   const nombreDe = useNombres(equipos.flatMap((e) => e.miembros));
   const numeroDe = (equipoId) => equipos.find((e) => e.id === equipoId)?.numero ?? '?';
   const activo = retoActivo(reto.estado);
   const terminado = reto.estado === 'TERMINADO';
-
-  function avisar(t) {
-    setAviso(t);
-    clearTimeout(tAviso.current);
-    tAviso.current = setTimeout(() => setAviso(''), 2500);
-  }
 
   function volver() {
     activarDemoReto(false);
@@ -158,10 +153,17 @@ function Arena({ matchId, equipos, roles }) {
           </button>
         </div>
 
-        <button className="rt-tab-chat" onClick={() => avisar('EL CHAT NO ESTÁ DISPONIBLE EN ESTA VERSIÓN')}>
-          <span>CHAT</span>
-          <Icono nombre="sobre" />
-        </button>
+        {miEquipo && !demo && (
+          <>
+            <button className={`rt-tab-chat ${chatAbierto ? 'abierto' : ''}`} onClick={() => setChatAbierto(!chatAbierto)}>
+              {chatNoLeidos > 0 && <span className="pm-badge">{chatNoLeidos}</span>}
+              <span>CHAT</span>
+              <Icono nombre="sobre" />
+            </button>
+            <ChatPartida matchId={matchId} equipoId={miEquipo.id} userId={userId}
+                         abierto={chatAbierto} onNoLeidos={setChatNoLeidos} />
+          </>
+        )}
 
         {equipos.slice(0, 2).map((eq, ei) => (
           <section key={eq.id} className={`rt-equipo ${ei === 0 ? 'izq' : 'der'}`}>
@@ -184,7 +186,6 @@ function Arena({ matchId, equipos, roles }) {
           </section>
         ))}
 
-        {aviso && <p className="rt-aviso">{aviso}</p>}
       </div>
 
       {/* ---------- SIN RETO ---------- */}
@@ -248,7 +249,7 @@ function BotonDuelo({ reto, miRol, miEquipo, rival, misClics, onPresionar }) {
 
   useEffect(() => {
     function onKey(e) {
-      if (e.repeat) return;
+      if (e.repeat || e.target.tagName === 'INPUT') return; // escribir en el chat no es presionar
       if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); presionar(); }
     }
     window.addEventListener('keydown', onKey);

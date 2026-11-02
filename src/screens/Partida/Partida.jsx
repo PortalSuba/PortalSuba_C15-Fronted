@@ -7,6 +7,7 @@ import ModalAcertijo from './ModalAcertijo';
 import ModalDesafio from './ModalDesafio';
 import ModalRol from './ModalRol';
 import PanelEspera from './PanelEspera';
+import ChatPartida from './ChatPartida';
 import { activarDemoReto, retoActivo } from '../../hooks/useReto';
 import { gameplayApi } from '../../services/gameplayApi';
 import { listarSalas, listarEquipos, unirseAEquipo } from '../../services/salasApi';
@@ -57,6 +58,8 @@ export default function Partida() {
   const [aviso, setAviso] = useState('');
   const [feed, setFeed] = useState(null);
   const [panel, setPanel] = useState(false);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [chatNoLeidos, setChatNoLeidos] = useState(0);
   const [ajustes, setAjustes] = useState(false);
   const [grid, setGrid] = useState(false);
   const [salir, setSalir] = useState(false);
@@ -280,6 +283,7 @@ export default function Partida() {
     retoVisto.current = true;
     if (acertijo) cerrarAcertijo();
     setPanel(false);
+    setChatAbierto(false);
     setAjustes(false);
     setVerRol(false);
     setDesafio(true);
@@ -370,7 +374,7 @@ export default function Partida() {
     function onKey(e) {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === 'g' || e.key === 'G') { setGrid((v) => !v); return; }
-      if (e.key === 'Escape') { setPanel(false); setAjustes(false); setSalir(false); return; }
+      if (e.key === 'Escape') { setPanel(false); setChatAbierto(false); setAjustes(false); setSalir(false); return; }
       if (verRol || acertijo || salir || desafio || resultado || fase !== 'jugando') return;
       if (TECLAS[e.key] && posRef.current[userId]) {
         e.preventDefault();
@@ -454,11 +458,25 @@ export default function Partida() {
         )}
 
         {/* Pestaña del panel */}
-        <button className={`pm-tab-panel ${panel ? 'abierto' : ''}`} onClick={() => setPanel(!panel)}>
+        <button className={`pm-tab-panel ${panel || chatAbierto ? 'abierto' : ''}`}
+                onClick={() => { setPanel(!panel); setChatAbierto(false); }}>
           {nuevosEnPanel > 0 && <span className="pm-badge">{nuevosEnPanel}</span>}
           <span className="pm-tab-panel__txt">PANEL</span>
           <Icono nombre={panel ? 'derecha' : 'izquierda'} />
         </button>
+        {/* Pestaña del chat: comparte el lado derecho con el panel, se abre uno a la vez */}
+        {fase === 'jugando' && equipo && (
+          <>
+            <button className={`pm-tab-panel pm-tab-chat ${panel || chatAbierto ? 'abierto' : ''}`}
+                    onClick={() => { setChatAbierto(!chatAbierto); setPanel(false); }}>
+              {chatNoLeidos > 0 && <span className="pm-badge">{chatNoLeidos}</span>}
+              <span className="pm-tab-panel__txt">CHAT</span>
+              <Icono nombre="sobre" />
+            </button>
+            <ChatPartida matchId={matchId} equipoId={equipo.id} userId={userId}
+                         abierto={chatAbierto} onNoLeidos={setChatNoLeidos} />
+          </>
+        )}
         {panel && (
           <aside className="pm-panel">
             <p className="pm-panel__titulo">INVENTARIO DEL EQUIPO</p>

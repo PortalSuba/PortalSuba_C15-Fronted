@@ -5,6 +5,8 @@ import { topics } from '../../config';
 import { useSubscription } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { codigoDe } from '../Home/SalaCard';
+import Chat from '../../components/Chat';
+import { canales } from '../../services/chatApi';
 import './PanelEspera.css';
 
 const MIN_EQUIPOS = 2;
@@ -19,6 +21,8 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   const [aviso, setAviso] = useState(null);
   const [copiado, setCopiado] = useState(false);
   const iniciadaRef = useRef(false);
+  const cerradaRef = useRef(false);
+  const canalSala = useMemo(() => canales.sala(salaId, userId), [salaId, userId]);
 
   const config = (() => { try { return Sesion.obtener('configSala'); } catch { return null; } })();
   const esPrivada = config && (config.privada === true || String(config.visibilidad ?? '').toUpperCase() === 'PRIVADA');
@@ -38,7 +42,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     let vivo = true;
     detalleSala(salaId)
       .then((d) => { if (vivo) aplicarDetalle(d); })
-      .catch(() => { if (vivo) setAviso('NO SE PUDO CARGAR LA SALA'); });
+      .catch(() => { if (vivo && !cerradaRef.current) setAviso('NO SE PUDO CARGAR LA SALA'); });
     return () => { vivo = false; };
   }, [salaId, aplicarDetalle]);
 
@@ -55,6 +59,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (m?.estado === 'CUENTA_REGRESIVA') setCuenta(m.segundos ?? 5);
     else if (m?.estado === 'CANCELADA') setCuenta(null);
     else if (m?.estado === 'CERRADA') {
+      cerradaRef.current = true; // la sala ya no existe: que un 404 de la carga no pise este aviso
       setCuenta(null);
       setAviso('EL ANFITRIÓN SALIÓ Y CERRÓ LA SALA');
       setTimeout(() => onVolver?.(), 2500);
@@ -176,50 +181,56 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
           </p>
         )}
 
-        <div className="pe-contador">
-          LISTOS <b>{totalListos}</b> DE <b>{totalJugadores}</b>
-        </div>
+        <div className="pe-cuerpo">
+          <div className="pe-columna">
+            <div className="pe-contador">
+              LISTOS <b>{totalListos}</b> DE <b>{totalJugadores}</b>
+            </div>
 
-        {/* Equipos */}
-        <div className="pe-equipos">
-          {equipos.map((e) => {
-            const mio = e.id === miEquipo?.id;
-            const lleno = (e.miembros?.length ?? 0) >= e.cupoMaximo;
-            return (
-              <div key={e.id} className={`pe-equipo ${mio ? 'pe-equipo--mio' : ''} ${e.listo ? 'pe-equipo--listo' : ''}`}>
-                <div className="pe-equipo__cab">
-                  <span>EQUIPO {e.numero}{mio ? ' (TÚ)' : ''}</span>
-                  <span className="pe-equipo__cupo">{e.miembros?.length ?? 0}/{e.cupoMaximo}</span>
-                </div>
-                <ul className="pe-equipo__lista">
-                  {(e.miembros ?? []).map((m) => {
-                    const listo = (e.listos ?? []).includes(m);
-                    return (
-                      <li key={m} className={`pe-jugador ${listo ? 'pe-jugador--listo' : ''}`}>
-                        <span className="pe-jugador__nombre">{nombreDe(m)}</span>
-                        <span className="pe-jugador__estado">{listo ? '✓ LISTO' : 'NO LISTO'}</span>
-                      </li>
-                    );
-                  })}
-                  {(e.miembros?.length ?? 0) === 0 && <li className="pe-jugador pe-jugador--vacio">SIN JUGADORES</li>}
-                </ul>
-                {!mio && !lleno && !enCuenta && (
-                  <button className="pe-cambiar" disabled={ocupado} onClick={() => cambiarEquipo(e)}>
-                    CAMBIARME A ESTE EQUIPO
-                  </button>
-                )}
+            {/* Equipos */}
+            <div className="pe-equipos">
+              {equipos.map((e) => {
+                const mio = e.id === miEquipo?.id;
+                const lleno = (e.miembros?.length ?? 0) >= e.cupoMaximo;
+                return (
+                  <div key={e.id} className={`pe-equipo ${mio ? 'pe-equipo--mio' : ''} ${e.listo ? 'pe-equipo--listo' : ''}`}>
+                    <div className="pe-equipo__cab">
+                      <span>EQUIPO {e.numero}{mio ? ' (TÚ)' : ''}</span>
+                      <span className="pe-equipo__cupo">{e.miembros?.length ?? 0}/{e.cupoMaximo}</span>
+                    </div>
+                    <ul className="pe-equipo__lista">
+                      {(e.miembros ?? []).map((m) => {
+                        const listo = (e.listos ?? []).includes(m);
+                        return (
+                          <li key={m} className={`pe-jugador ${listo ? 'pe-jugador--listo' : ''}`}>
+                            <span className="pe-jugador__nombre">{nombreDe(m)}</span>
+                            <span className="pe-jugador__estado">{listo ? '✓ LISTO' : 'NO LISTO'}</span>
+                          </li>
+                        );
+                      })}
+                      {(e.miembros?.length ?? 0) === 0 && <li className="pe-jugador pe-jugador--vacio">SIN JUGADORES</li>}
+                    </ul>
+                    {!mio && !lleno && !enCuenta && (
+                      <button className="pe-cambiar" disabled={ocupado} onClick={() => cambiarEquipo(e)}>
+                        CAMBIARME A ESTE EQUIPO
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Diagnóstico */}
+            {!enCuenta && motivos.length > 0 && (
+              <div className="pe-motivos">
+                <span className="pe-motivos__titulo">¿POR QUÉ NO ARRANCA?</span>
+                <ul>{motivos.map((m) => <li key={m}>{m}</li>)}</ul>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Diagnóstico */}
-        {!enCuenta && motivos.length > 0 && (
-          <div className="pe-motivos">
-            <span className="pe-motivos__titulo">¿POR QUÉ NO ARRANCA?</span>
-            <ul>{motivos.map((m) => <li key={m}>{m}</li>)}</ul>
+            )}
           </div>
-        )}
+
+          <Chat canal={canalSala} userId={userId} titulo="CHAT DE LA SALA" />
+        </div>
 
         {aviso && <p className="pe-aviso">{aviso}</p>}
 

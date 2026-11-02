@@ -62,7 +62,7 @@
 :root .pe-velo { padding: 16px; box-sizing: border-box; }
 
 :root .pe-panel {
-  width: min(calc(var(--u, 10px) * 70), calc(100vw - 32px));
+  width: min(calc(var(--u, 10px) * 92), calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding-bottom: 0;                       /* el espacio inferior lo da la barra de botones */
   gap: max(8px, calc(var(--u, 10px) * 1.1));
@@ -93,6 +93,15 @@
 :root .pe-aviso { font-size: var(--fs-texto); }
 :root .pe-boton { font-size: var(--fs-boton); }
 :root .pe-boton--chico { font-size: var(--fs-mini); }
+:root .ch-titulo { font-size: var(--fs-texto); }
+:root .ch-texto,
+:root .ch-input { font-size: var(--fs-texto); }
+:root .ch-cab,
+:root .ch-vacio,
+:root .ch-error,
+:root .ch-contador,
+:root .ch-enviar,
+:root .cp-tabs button { font-size: var(--fs-mini); }
 
 /* ANUNCIO DE ROL */
 :root .mr-sup { font-size: var(--fs-texto); }

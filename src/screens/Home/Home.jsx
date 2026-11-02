@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SalaCard, { codigoDe } from './SalaCard';
 import Icono from './Iconos';
+import Ranking from './Ranking';
+import Chat from '../../components/Chat';
 import { useTopic } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { listarSalas, crearSala, unirseASala } from '../../services/salasApi';
+import { estadisticasDe } from '../../services/estadisticasApi';
+import { canales } from '../../services/chatApi';
 import { Sesion } from '../../services/sesion';
 import './Home.css';
 import { topics } from '../../config';
@@ -19,8 +23,8 @@ const MINIATURAS = [
 ];
 
 const TABS = [
-  { id: 'salas', texto: 'SALAS', icono: 'salas' },
-  { id: 'ranking', texto: 'RANKING', icono: 'ranking' },
+  { id: 'salas', texto: 'SALAS', icono: 'salas', disponible: true },
+  { id: 'ranking', texto: 'RANKING', icono: 'ranking', disponible: true },
   { id: 'amigos', texto: 'AMIGOS', icono: 'persona' },
   { id: 'ajustes', texto: 'AJUSTES', icono: 'ajustes' },
 ];
@@ -35,7 +39,10 @@ export default function Home() {
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState('');
   const [silenciado, setSilenciado] = useState(false);
-  const [tabChat, setTabChat] = useState('mensajes');
+  const [tabChat, setTabChat] = useState('global');
+  const canalGlobal = useMemo(() => canales.global(userId), [userId]);
+  const [vista, setVista] = useState('salas');
+  const [puntos, setPuntos] = useState(0);
   const [codigo, setCodigo] = useState(['', '', '', '']);
   const [popup, setPopup] = useState(false);
   const [nombreSala, setNombreSala] = useState('');
@@ -56,6 +63,10 @@ export default function Home() {
   }, []);
 
    useTopic(topics.salas(), setSalas);
+
+  useEffect(() => {
+    if (userId) estadisticasDe(userId).then((e) => setPuntos(e.puntos)).catch(() => {});
+  }, [userId]);
 
   function avisar(texto) {
     setAviso(texto);
@@ -144,28 +155,21 @@ export default function Home() {
                   <p className="carnet__nombre">{username}</p>
                   <p className="carnet__rango">SOBREVIVIENTE</p>
                   <hr />
-                  <p className="carnet__puntos"><Icono nombre="llave" /> PUNTOS: 0</p>
+                  <p className="carnet__puntos"><Icono nombre="llave" /> PUNTOS: {puntos}</p>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Mensajes / amigos (fuera del sprint 1: solo maqueta) */}
+          {/* Chat global (amigos: aún no existe en el back) */}
           <section className="placa placa-chat">
             <div className="chat-tabs">
-              <button className={tabChat === 'mensajes' ? 'activa' : ''} onClick={() => setTabChat('mensajes')}>MENSAJES</button>
+              <button className={tabChat === 'global' ? 'activa' : ''} onClick={() => setTabChat('global')}>GLOBAL</button>
               <button className={tabChat === 'amigos' ? 'activa' : ''} onClick={() => setTabChat('amigos')}>AMIGOS</button>
             </div>
-            <div className="chat-lista" title="Disponible en una próxima versión">
-              {[0, 1].map((i) => (
-                <div className="chat-fila" key={i}>
-                  <span className="chat-avatar" />
-                  <span className={`chat-punto ${i === 0 ? 'on' : 'off'}`} />
-                  <span className="chat-lineas"><i /><i /></span>
-                </div>
-              ))}
-              <span className="chat-scroll" />
-            </div>
+            {tabChat === 'global'
+              ? <Chat canal={canalGlobal} userId={userId} />
+              : <p className="chat-proximamente">PRÓXIMAMENTE</p>}
           </section>
 
           {/* Unirse por código */}
@@ -207,8 +211,8 @@ export default function Home() {
               {TABS.map((t) => (
                 <button
                   key={t.id}
-                  className={`tab ${t.id === 'salas' ? 'activa' : ''}`}
-                  onClick={() => t.id !== 'salas' && avisar(`${t.texto} no está disponible en esta versión`)}
+                  className={`tab ${t.id === vista ? 'activa' : ''}`}
+                  onClick={() => (t.disponible ? setVista(t.id) : avisar(`${t.texto} no está disponible en esta versión`))}
                 >
                   <Icono nombre={t.icono} /> {t.texto}
                 </button>
@@ -218,18 +222,16 @@ export default function Home() {
                     title={silenciado ? 'Activar sonido' : 'Silenciar'}>
               <Icono nombre={silenciado ? 'mute' : 'sonido'} />
             </button>
-            <button className="icono-btn" onClick={() => avisar('El chat no está disponible en esta versión')}
-                    title="Mensajes">
-              <Icono nombre="sobre" />
-            </button>
             <button className="cerrar" onClick={cerrarSesion}>
               <Icono nombre="salir" /><span>CERRAR<br />SESIÓN</span>
             </button>
           </nav>
 
-          <h1 className="titulo-salas">SALAS DISPONIBLES</h1>
+          <h1 className="titulo-salas">{vista === 'salas' ? 'SALAS DISPONIBLES' : 'RANKING'}</h1>
 
-          <div className="grid-salas">
+          {vista === 'ranking' && <Ranking userId={userId} />}
+
+          {vista === 'salas' && <div className="grid-salas">
             {cargando && <p className="mensaje-grid">CARGANDO SALAS...</p>}
 
             {!cargando && salas.map((sala, i) => (
@@ -249,7 +251,7 @@ export default function Home() {
                 <small>+ CREAR UNA SALA</small>
               </button>
             ))}
-          </div>
+          </div>}
         </main>
 
         <button className="volver" onClick={cerrarSesion} title="Volver al inicio">
