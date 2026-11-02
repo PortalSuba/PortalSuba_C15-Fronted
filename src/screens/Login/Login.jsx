@@ -41,6 +41,15 @@ export default function Login() {
     })();
   }, [navigate, accesoConcedido]);
 
+  // Al darle atrás desde el proveedor el navegador restaura la página tal como quedó: en "verificando"
+  useEffect(() => {
+    function alRestaurar(e) {
+      if (e.persisted) setEstado((actual) => (actual === 'verificando' ? 'esperando' : actual));
+    }
+    window.addEventListener('pageshow', alRestaurar);
+    return () => window.removeEventListener('pageshow', alRestaurar);
+  }, []);
+
   async function irAlProveedor(opciones) {
     setEstado('verificando');
     try {
