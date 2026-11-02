@@ -13,7 +13,7 @@ import './RetoHeroeVerdugo.css';
 
 const FONDO = '/assets/fondos/Fondo_Reto.jpeg';
 const ASPECTO = 16 / 9;
-const VOLVER_EN = 8;
+const VOLVER_EN = 5;
 
 const BANCO_IZQ = [[16, 57], [21, 53], [26, 49], [31, 45]];
 const BANCO_DER = [[69, 45], [74, 49], [79, 53], [84, 57]];
@@ -148,9 +148,12 @@ function Arena({ matchId, equipos, roles }) {
           <button className="rt-cuadro" onClick={() => setSonido(!sonido)} title="Sonido">
             <Icono nombre={sonido ? 'sonido' : 'mute'} />
           </button>
-          <button className="rt-cuadro rt-rojo" onClick={volver} title="Volver a la partida">
-            <Icono nombre="salir" />
-          </button>
+          {/* Mientras hay reto nadie vuelve antes: seria ventaja sobre los que siguen aquí */}
+          {!activo && !terminado && (
+            <button className="rt-cuadro rt-rojo" onClick={volver} title="Volver a la partida">
+              <Icono nombre="salir" />
+            </button>
+          )}
         </div>
 
         {miEquipo && !demo && (
@@ -226,7 +229,7 @@ function Arena({ matchId, equipos, roles }) {
             </div>
             {miRol && <p className="rt-resultado__sub">HICISTE {misClics} CLICS COMO {miRol === 'HEROE' ? 'HÉROE' : 'VERDUGO'}</p>}
             <p className="rt-resultado__nota">EL EQUIPO GANADOR SUMA 1 PUNTO EN LA PARTIDA, COMO UN ACERTIJO.</p>
-            <button className="rt-btn rt-btn-verde" onClick={volver}>VOLVER A LA PARTIDA ({Math.max(vuelta, 0)})</button>
+            <p className="rt-resultado__cuenta">VOLVIENDO A LA PARTIDA EN {Math.max(vuelta, 0)}</p>
           </div>
         </div>
       )}

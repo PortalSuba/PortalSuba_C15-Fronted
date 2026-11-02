@@ -46,14 +46,15 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     return () => { vivo = false; };
   }, [salaId, aplicarDetalle]);
 
-  // Si cierra la página, el back lo saca de la sala (y si es el anfitrión, la cierra)
-  useEffect(() => {
-    if (salaId && userId) registrarSesionSala(salaId, userId);
-  }, [salaId, userId]);
-
-  // Si se cayó la conexión, el back ya lo sacó de la sala (o la cerró si era el anfitrión) y mientras
-  // tanto no pudo avisarle: al reconectar hay que preguntar, si no queda en un lobby que ya no sirve.
+  // Si cierra la página y no vuelve en unos segundos, el back lo saca de la sala (y si es el anfitrión,
+  // la cierra). Cada conexión es una sesión nueva: hay que registrarla también al reconectar.
   const conectado = useConexion();
+  useEffect(() => {
+    if (conectado && salaId && userId) registrarSesionSala(salaId, userId);
+  }, [conectado, salaId, userId]);
+
+  // Si tardó más que ese tiempo en volver, el back ya no pudo avisarle: al reconectar hay que
+  // preguntar, si no queda en un lobby que ya no sirve.
   const yaConecto = useRef(false);
   useEffect(() => {
     if (!conectado) return;

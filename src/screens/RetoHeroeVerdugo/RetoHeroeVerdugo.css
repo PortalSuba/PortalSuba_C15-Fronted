@@ -515,6 +515,7 @@
 .rt-resultado.heroe .rt-resultado__titulo { color: var(--heroe); }
 .rt-resultado.verdugo .rt-resultado__titulo { color: var(--verdugo); }
 .rt-resultado__sub { font-size: calc(var(--u) * 1.05); color: var(--crema-tenue); }
+.rt-resultado__cuenta { font-family: var(--fuente-titulo); font-size: calc(var(--u) * 1.2); color: var(--naranja); }
 
 /*ANIMACIONES*/
 @keyframes rt-parpadeo { 50% { opacity: 0.4; } }
