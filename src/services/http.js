@@ -2,10 +2,14 @@ import { config } from '../config';
 import { obtenerToken } from './auth';
 import { Sesion } from './sesion';
 
+const CARACTERES_CODIGO = 8; // suficientes para buscar en los logs: trace_id=~"abcd1234.*"
+
 export class ApiError extends Error {
-  constructor(status, mensaje) {
-    super(mensaje);
+  constructor(status, mensaje, traceId = null) {
+    // En un fallo del servidor el jugador ve un código para reportarlo
+    super(status >= 500 && traceId ? `${mensaje} (código ${traceId.slice(0, CARACTERES_CODIGO)})` : mensaje);
     this.status = status;
+    this.traceId = traceId;
   }
   get esConflicto() { return this.status === 409; }
   get esProhibido() { return this.status === 403; }
@@ -37,7 +41,11 @@ async function request(method, path, { body, query } = {}) {
   }
   if (res.status === 204) return null;
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, data?.error || `Error ${res.status}`);
+  if (!res.ok) {
+    const traceId = res.headers.get('X-Trace-Id');
+    console.warn(`[API] ${method} ${path} -> ${res.status} (traceId ${traceId ?? 'desconocido'})`);
+    throw new ApiError(res.status, data?.error || `Error ${res.status}`, traceId);
+  }
   return data;
 }
 

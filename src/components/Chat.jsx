@@ -24,7 +24,8 @@ function mensajeDeError(e) {
   if (e?.esProhibido) return 'YA NO ESTÁS AQUÍ';
   if (e?.status === 429) return 'VAS MUY RÁPIDO, ESPERA UN MOMENTO';
   if (e?.status === 400) return (e.message || 'MENSAJE NO VÁLIDO').toUpperCase();
-  return 'NO SE PUDO ENVIAR, INTENTA DE NUEVO';
+  const codigo = e?.status >= 500 && e.traceId ? ` (CÓDIGO ${e.traceId.slice(0, 8).toUpperCase()})` : '';
+  return `NO SE PUDO ENVIAR, INTENTA DE NUEVO${codigo}`;
 }
 
 /**
