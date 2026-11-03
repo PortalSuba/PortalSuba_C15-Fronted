@@ -28,6 +28,7 @@ export const topics = {
   chatSala: (salaId) => `/topic/chat/salas/${salaId}`,
   chatPartida: (m) => `/topic/chat/partidas/${m}`,
   chatEquipo: (m, e) => `/topic/chat/partidas/${m}/equipos/${e}`,
+  ranking: () => '/topic/estadisticas/ranking',                  // aviso: terminó una partida
 };
 
 export const destinos = {

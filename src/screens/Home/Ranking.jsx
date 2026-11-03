@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { rankingJugadores, estadisticasDe } from '../../services/estadisticasApi';
 import { useNombres } from '../../hooks/useNombres';
+import { useSubscription } from '../../hooks/useSocket';
+import { topics } from '../../config';
 import './Ranking.css';
 
 const TEXTO_RESULTADO = { VICTORIA: 'VICTORIA', EMPATE: 'EMPATE', DERROTA: 'DERROTA' };
@@ -12,15 +14,19 @@ export default function Ranking({ userId }) {
   const [ranking, setRanking] = useState(null);
   const [mias, setMias] = useState(null);
   const [error, setError] = useState(false);
+  const [version, setVersion] = useState(0);
   const nombreDe = useNombres(ranking?.map((j) => j.userId));
+
+  // El back solo avisa que terminó una partida; se vuelve a pedir todo sin borrar lo que ya se ve
+  useSubscription(topics.ranking(), () => setVersion((v) => v + 1));
 
   useEffect(() => {
     let vivo = true;
     Promise.all([rankingJugadores(10), estadisticasDe(userId)])
-      .then(([r, e]) => { if (vivo) { setRanking(r); setMias(e); } })
-      .catch(() => { if (vivo) setError(true); });
+      .then(([r, e]) => { if (vivo) { setRanking(r); setMias(e); setError(false); } })
+      .catch(() => { if (vivo && version === 0) setError(true); });
     return () => { vivo = false; };
-  }, [userId]);
+  }, [userId, version]);
 
   if (error) return <p className="mensaje-grid">NO SE PUDO CARGAR EL RANKING</p>;
   if (!ranking || !mias) return <p className="mensaje-grid">CARGANDO RANKING...</p>;
