@@ -27,15 +27,20 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   const config = (() => { try { return Sesion.obtener('configSala'); } catch { return null; } })();
   const esPrivada = config && (config.privada === true || String(config.visibilidad ?? '').toUpperCase() === 'PRIVADA');
 
+  // Los callbacks del padre cambian en cada render: si fueran dependencias, cada respuesta volvería a
+  // disparar los efectos que piden la sala, y el lobby se llamaría a sí mismo sin parar.
+  const padreRef = useRef({ onIniciada, onVolver, onDetalle });
+  useEffect(() => { padreRef.current = { onIniciada, onVolver, onDetalle }; });
+
   const aplicarDetalle = useCallback((d) => {
     if (!d) return;
     setDetalle(d);
-    onDetalle?.(d);
+    padreRef.current.onDetalle?.(d);
     if (d.estado === 'EN_PARTIDA' && !iniciadaRef.current) {
       iniciadaRef.current = true;
-      onIniciada?.(salaId);
+      padreRef.current.onIniciada?.(salaId);
     }
-  }, [onDetalle, onIniciada, salaId]);
+  }, [salaId]);
 
   // Carga inicial
   useEffect(() => {
@@ -63,7 +68,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
       cerradaRef.current = true;
       setCuenta(null);
       setAviso(texto);
-      setTimeout(() => onVolver?.(), 2500);
+      setTimeout(() => padreRef.current.onVolver?.(), 2500);
     };
     detalleSala(salaId)
       .then((d) => {
@@ -71,7 +76,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
         else salirConAviso('SE CAYÓ TU CONEXIÓN Y SALISTE DE LA SALA');
       })
       .catch((e) => { if (e?.esNoEncontrado) salirConAviso('SE CAYÓ LA CONEXIÓN Y LA SALA SE CERRÓ'); });
-  }, [conectado, salaId, userId, aplicarDetalle, onVolver]);
+  }, [conectado, salaId, userId, aplicarDetalle]);
 
   // Cambios de la sala en vivo (entradas, equipos, listos)
   useSubscription(topics.sala(salaId), aplicarDetalle);
