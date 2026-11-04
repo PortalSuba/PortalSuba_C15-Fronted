@@ -35,6 +35,8 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   const aplicarDetalle = useCallback((d) => {
     if (!d) return;
     setDetalle(d);
+    // El resumen la necesita y para entonces la sala ya no existe
+    if (d.minutos) Sesion.guardar('minutosPartida', d.minutos);
     padreRef.current.onDetalle?.(d);
     if (d.estado === 'EN_PARTIDA' && !iniciadaRef.current) {
       iniciadaRef.current = true;

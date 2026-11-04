@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icono from '../Home/Iconos';
 import { useTopic } from '../../hooks/useSocket';
-import { listarSalas, crearSala, configurarSala, unirseASala } from '../../services/salasApi';
+import { listarSalas, crearSala, unirseASala } from '../../services/salasApi';
 import { Sesion } from '../../services/sesion';
 import { authApi } from '../../services/authApi';
 import './CrearSala.css';
@@ -16,13 +16,14 @@ const TEMATICAS = [
   { id: 'laboratorio', nombre: 'LABORATORIO', imagen: '/assets/salas/sala_3.png', dificultad: 4 },
   { id: 'sotano', nombre: 'SÓTANO OSCURO', imagen: '/assets/salas/sala_4.png', dificultad: 5 },
 ];
-// La partida dura lo que fija el back (c15.partida.duracion = 5 min); los demás tiempos aún no están disponibles
+// Lo que el back acepta para la duración de la partida (Sala.DURACIONES_MINUTOS)
 const TIEMPO_PARTIDA = 5;
-const TIEMPOS = [TIEMPO_PARTIDA, 15, 30, 45];
+const TIEMPOS = [TIEMPO_PARTIDA, 10, 15];
 const NIVELES = ['', 'MUY FÁCIL', 'FÁCIL', 'MEDIA', 'DIFÍCIL', 'EXTREMA'];
 const MAX_NOMBRE = 24;
+// Por estabilidad las salas son de 2 equipos de 2 (el back no acepta otra configuración)
 const MIN_JUGADORES = 2;
-const MAX_JUGADORES = 4;
+const MAX_JUGADORES = 2;
 const NUM_EQUIPOS = 2;
 
 export default function CrearSala() {
@@ -68,8 +69,7 @@ export default function CrearSala() {
     setError('');
     setCreando(true);
     try{
-      const sala = await crearSala(nombreLimpio);
-      if (jugadores !== 4) await configurarSala(sala.id, NUM_EQUIPOS, jugadores);
+      const sala = await crearSala({ nombre: nombreLimpio, minutos: tiempo });
       await unirseASala(sala.id);
 
       Sesion.guardar('salaId', sala.id);
@@ -182,8 +182,7 @@ export default function CrearSala() {
               <p className="cs-label">TIEMPO DE LA PARTIDA</p>
               <div className="cs-opciones cs-cuatro">
                 {TIEMPOS.map((m) => (
-                  <button key={m} className={`cs-opcion ${tiempo === m ? 'activa' : ''}`} onClick={() => setTiempo(m)}
-                          disabled={m !== TIEMPO_PARTIDA} title={m !== TIEMPO_PARTIDA ? 'PRÓXIMAMENTE' : undefined}>
+                  <button key={m} className={`cs-opcion ${tiempo === m ? 'activa' : ''}`} onClick={() => setTiempo(m)}>
                     {m} MIN
                   </button>
                 ))}

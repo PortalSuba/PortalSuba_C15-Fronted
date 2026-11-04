@@ -12,7 +12,7 @@ import './Resumen.css';
 const FONDO = '/assets/fondos/Fondo_Resumen.jpeg';
 const FONDO_RESPALDO = '/assets/fondos/Fondo_Lobby.jpeg';
 
-// Igual a la duración de la partida en el back (c15.partida.duracion = 5 min)
+// Si no se sabe cuánto duraba (se entró sin pasar por el lobby), la duración por defecto del back
 const DURACION_DEFECTO_SEG = 5 * 60;
 
 const mmss = (seg) => {
@@ -144,7 +144,8 @@ export default function Resumen() {
     : resultado.equipoGanadorId ? `EL EQUIPO ${numeroEquipo(resultado.equipoGanadorId)} ESCAPÓ PRIMERO`
     : 'NADIE LOGRÓ ESCAPAR';
 
-  const duracion = resultado?.duracionSegundos ?? DURACION_DEFECTO_SEG;
+  const minutosPartida = Sesion.obtener('minutosPartida');
+  const duracion = resultado?.duracionSegundos ?? (minutosPartida ? minutosPartida * 60 : DURACION_DEFECTO_SEG);
   const usado = segRestantes == null ? null : duracion - segRestantes;
   const puntos = useConteo(miFila?.puntaje ?? 0);
 

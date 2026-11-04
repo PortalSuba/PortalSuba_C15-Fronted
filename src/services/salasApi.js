@@ -7,8 +7,11 @@ export const listarSalas = () => http.get('/api/salas');
 export const detalleSala = (salaId) => http.get(`/api/salas/${salaId}`);
 
 /** Quien la crea es el anfitrión: el back lo saca del token. */
+/** Acepta el nombre o { nombre, minutos } (5, 10 o 15; sin minutos el back usa 5). */
 export const crearSala = (nombreOData) =>
-  http.post('/api/salas', { nombre: typeof nombreOData === 'object' ? nombreOData.nombre : nombreOData });
+  http.post('/api/salas', typeof nombreOData === 'object'
+    ? { nombre: nombreOData.nombre, minutos: nombreOData.minutos }
+    : { nombre: nombreOData });
 
 /** Solo el anfitrión.*/
 export const configurarSala = (salaId, numEquipos, jugadoresPorEquipo) =>
