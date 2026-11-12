@@ -58,3 +58,24 @@ export async function salir() {
   const c = await auth0();
   await c.logout({ logoutParams: { returnTo: window.location.origin } });
 }
+
+/** Claim donde Auth0 pone los roles (una Action los agrega al token). Debe ser igual al del back. */
+export const CLAIM_ROLES = 'https://api.escaperoomc15/roles';
+
+/**
+ * Roles del usuario según su token (['admin'] o []). Solo sirve para mostrar u ocultar cosas en pantalla:
+ * quien decide es el back, que rechaza con 403 lo que no le corresponde aunque el front lo muestre.
+ */
+export async function rolesDelUsuario() {
+  try {
+    const c = await auth0();
+    const usuario = await c.getUser();
+    return usuario?.[CLAIM_ROLES] ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function esAdmin() {
+  return (await rolesDelUsuario()).includes('admin');
+}

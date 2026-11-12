@@ -16,6 +16,7 @@ import { topics } from '../../config';
 import { useConexion, useSubscription } from '../../hooks/useSocket';
 import { useCronometro } from '../../hooks/useCronometro';
 import { useNombres } from '../../hooks/useNombres';
+import { useEsAdmin } from '../../hooks/useEsAdmin';
 import './Partida.css';
 
 const FONDO = '/assets/fondos/Fondo_mapa.jpeg';
@@ -61,6 +62,7 @@ export default function Partida() {
   const [chatAbierto, setChatAbierto] = useState(false);
   const [chatNoLeidos, setChatNoLeidos] = useState(0);
   const [ajustes, setAjustes] = useState(false);
+  const admin = useEsAdmin();
   const [grid, setGrid] = useState(false);
   const [salir, setSalir] = useState(false);
   const [equipos, setEquipos] = useState([]);
@@ -461,8 +463,9 @@ export default function Partida() {
         {ajustes && (
           <div className="pm-ajustes">
             <button onClick={() => setGrid(!grid)}>{grid ? 'OCULTAR' : 'MOSTRAR'} CUADRÍCULA (G)</button>
-            <button onClick={iniciarRetoDev}>INICIAR RETO AHORA (DEV)</button>
-            <button onClick={simularReto}>SIMULAR RETO SIN BACK (DEMO)</button>
+            {/* Solo el admin: el back rechaza /dev/** a los jugadores */}
+            {admin && <button onClick={iniciarRetoDev}>INICIAR RETO AHORA (DEV)</button>}
+            {admin && <button onClick={simularReto}>SIMULAR RETO SIN BACK (DEMO)</button>}
             <button onClick={() => { setAjustes(false); setSalir(true); }}>SALIR DE LA PARTIDA</button>
           </div>
         )}
