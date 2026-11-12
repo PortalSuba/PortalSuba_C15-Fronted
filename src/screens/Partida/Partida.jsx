@@ -235,14 +235,17 @@ export default function Partida() {
     });
   }
 
+  // Los topics del equipo se escuchan solo con la partida en juego: el back da el permiso cuando los equipos
+  // ya quedaron fijos (en el lobby se pueden cambiar). Lo que pasó antes de entrar llega por REST en entrar().
+  const topicoEquipo = (topico) => (fase === 'jugando' && equipoId ? topico(matchId, equipoId) : null);
+
   // Roles: llegan a todo el equipo cuando arranca la partida
-  useSubscription(equipoId ? topics.roles(matchId, equipoId) : null, (msg) => {
+  useSubscription(topicoEquipo(topics.roles), (msg) => {
     mostrarRol(msg.roles?.[userId]);
-    if (faseRef.current !== 'jugando') alIniciarPartida();
   });
 
   // Posiciones de los compañeros
-  useSubscription(equipoId ? topics.posiciones(matchId, equipoId) : null, (p) => {
+  useSubscription(topicoEquipo(topics.posiciones), (p) => {
     if (p.userId === userId) {
       if (!p.conectado) { setErrorFatal('SALISTE DE LA PARTIDA'); setFase('error'); }
       return;
@@ -274,7 +277,7 @@ export default function Partida() {
   }
 
   // Inventario compartido del equipo
-  useSubscription(equipoId ? topics.inventario(matchId, equipoId) : null, (inv) => {
+  useSubscription(topicoEquipo(topics.inventario), (inv) => {
     const nuevos = inv.objetos.filter((o) => !invRef.current.some((v) => v.id === o.id));
     nuevos.forEach((o) => anunciar(`${nombreDe(o.recolectadoPor)} RECOGIÓ ${o.nombre.toUpperCase()}`));
     invRef.current = inv.objetos;
