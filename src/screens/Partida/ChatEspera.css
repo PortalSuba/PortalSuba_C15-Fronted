@@ -1,0 +1,88 @@
+.ce-chat {
+  width: calc(var(--u) * 28);
+  height: calc(100cqh - var(--u) * 10);
+  max-height: calc(var(--u) * 52);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1);
+  padding: calc(var(--u) * 1.6) calc(var(--u) * 1.6);
+  background: #1c140e;
+  border: calc(var(--u) * 0.3) solid #c9963c;
+  box-shadow: 0 0 0 calc(var(--u) * 0.3) #000, 0 calc(var(--u) * 1) calc(var(--u) * 3) #000c;
+}
+
+.ce-titulo {
+  margin: 0;
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: calc(var(--u) * 1.1);
+  color: #f0b54a;
+}
+
+.ce-lista {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: calc(var(--u) * 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.7);
+  background: #120b06;
+  border: calc(var(--u) * 0.15) solid #6b5233;
+}
+
+.ce-vacio { margin: auto 0; text-align: center; font-size: calc(var(--u) * 0.95); opacity: 0.55; line-height: 1.6; }
+
+.ce-mensaje {
+  align-self: flex-start;
+  max-width: 88%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.25);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8);
+  background: #2a1d12;
+  border-left: calc(var(--u) * 0.3) solid #c9963c;
+}
+.ce-mensaje--mio { align-self: flex-end; background: #1f2a16; border-left: none; border-right: calc(var(--u) * 0.3) solid #5fbf4a; }
+
+.ce-mensaje__cab { display: flex; justify-content: space-between; gap: calc(var(--u) * 1); font-size: calc(var(--u) * 0.8); }
+.ce-mensaje__autor { color: #f0b54a; }
+.ce-mensaje--mio .ce-mensaje__autor { color: #7fd85f; }
+.ce-mensaje__hora { opacity: 0.55; }
+.ce-mensaje__texto {
+  font-family: 'VT323', monospace;
+  font-size: calc(var(--u) * 1.35);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ce-aviso { margin: 0; text-align: center; color: #ff7a6b; font-size: calc(var(--u) * 0.9); }
+
+.ce-form { display: flex; gap: calc(var(--u) * 0.6); }
+.ce-input {
+  flex: 1;
+  min-width: 0;
+  font-family: 'VT323', monospace;
+  font-size: calc(var(--u) * 1.35);
+  color: #f1dfb8;
+  background: #120b06;
+  border: calc(var(--u) * 0.15) solid #6b5233;
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 0.7);
+}
+.ce-input:focus { outline: none; border-color: #c9963c; }
+.ce-input::placeholder { color: #f1dfb855; }
+
+.ce-enviar {
+  font-family: 'Press Start 2P', monospace;
+  font-size: calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 1);
+  color: #10240b;
+  background: linear-gradient(#7fd85f, #3f9a2e);
+  border: calc(var(--u) * 0.2) solid #000;
+  cursor: pointer;
+}
+.ce-enviar:hover:not(:disabled) { filter: brightness(1.15); }
+.ce-enviar:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -5,6 +5,7 @@ import { topics } from '../../config';
 import { useSubscription } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { codigoDe } from '../Home/SalaCard';
+import ChatEspera from './ChatEspera';
 import './PanelEspera.css';
 
 const MIN_EQUIPOS = 2;
@@ -234,6 +235,8 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
           </button>
         </div>
       </section>
+
+      <ChatEspera salaId={salaId} userId={userId} />
     </div>
   );
 }

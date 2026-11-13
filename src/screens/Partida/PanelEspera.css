@@ -2,8 +2,10 @@
   position: absolute;
   inset: 0;
   z-index: 40;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 2);
   background: rgba(8, 5, 3, 0.55);
   font-family: 'Silkscreen', monospace;
   color: #f1dfb8;
