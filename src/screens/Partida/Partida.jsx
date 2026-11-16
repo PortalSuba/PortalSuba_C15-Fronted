@@ -81,6 +81,12 @@ export default function Partida({ admin }) {
   const faseRef = useRef(fase);
   faseRef.current = fase;
 
+  // Registrarse en el mapa al entrar y cada vez que la conexion vuelve (recargar, corte de red u otra replica del
+  // broker): asi gameplay sabe que el jugador sigue aqui y no lo saca de la partida al terminar la gracia
+  useEffect(() => {
+    if (conectado && fase === 'jugando') gameplayApi.registrarSesion(matchId);
+  }, [conectado, fase, matchId]);
+
   const miPos = posiciones[userId];
 
   const nombreDe = useNombres([...(equipo?.miembros ?? []), ...equipos.flatMap((e) => e.miembros), ...Object.keys(posiciones)]);
@@ -151,7 +157,6 @@ export default function Partida({ admin }) {
         if (e.esNoEncontrado) { setFase('esperando'); return false; } // partida no iniciada
         throw e;
       }
-      gameplayApi.registrarSesion(matchId);
       setFase('jugando');
       listarEquipos(salaId).then(setEquipos).catch(() => {});
 

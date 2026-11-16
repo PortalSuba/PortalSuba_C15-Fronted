@@ -2,13 +2,14 @@ import Icono from './Iconos';
 
 export const codigoDe = (sala) => sala.id.slice(0, 4).toUpperCase();
 
-export default function SalaCard({ sala, userId, nombreLider, miniatura, onEntrar }) {
+export default function SalaCard({ sala, userId, nombreLider, miniatura, miPartida, onEntrar }) {
   const llena = sala.jugadoresActuales >= sala.cupoTotal;
   const enPartida = sala.estado === 'EN_PARTIDA';
   const soyAnfitrion = sala.anfitrionId === userId;
   const lider = soyAnfitrion ? 'TÚ' : nombreLider.toUpperCase();
   const libres = sala.cupoTotal - sala.jugadoresActuales;
-  const puedeEntrar = soyAnfitrion || (!llena && !enPartida);
+  // miPartida: la partida en curso es la del jugador (recargo o se le cayo la conexion): puede volver a ella
+  const puedeEntrar = soyAnfitrion || miPartida || (!llena && !enPartida);
 
   let estado = { texto: libres === 1 ? '1 CUPO LIBRE' : `${libres} CUPOS LIBRES`, clase: 'btn-marron' };
   if (enPartida) estado = { texto: 'EN PROGRESO', clase: 'btn-marron' };
@@ -48,7 +49,7 @@ export default function SalaCard({ sala, userId, nombreLider, miniatura, onEntra
 
       <footer className="sala__acciones">
         <button className="btn btn-verde" disabled={!puedeEntrar} onClick={() => onEntrar(sala)}>
-          {soyAnfitrion ? 'ENTRAR' : 'UNIRSE'}
+          {miPartida ? 'VOLVER' : soyAnfitrion ? 'ENTRAR' : 'UNIRSE'}
         </button>
         <span className={`btn ${estado.clase} btn-estado`}>{estado.texto}</span>
       </footer>

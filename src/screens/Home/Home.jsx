@@ -107,9 +107,12 @@ export default function Home({ admin }) {
     temporizador.current = setTimeout(() => setAviso(''), 3500);
   }
 
+  // La partida en curso del jugador (la guarda Partida): si recargo o se le cayo la conexion, puede volver
+  const esMiPartida = (sala) => sala.estado === 'EN_PARTIDA' && Sesion.obtener('matchId') === sala.id;
+
   async function entrar(sala) {
     try {
-      if (sala.anfitrionId !== userId) await unirseASala(sala.id);
+      if (sala.anfitrionId !== userId && !esMiPartida(sala)) await unirseASala(sala.id);
       Sesion.guardar('salaId', sala.id);
       navegar(`/sala/${sala.id}`);
     } catch (e) {
@@ -260,6 +263,7 @@ export default function Home({ admin }) {
                   userId={userId}
                   nombreLider={nombreDe(sala.anfitrionId)}
                   miniatura={MINIATURA_BIBLIOTECA}
+                  miPartida={esMiPartida(sala)}
                   onEntrar={entrar}
                 />
               ))}
