@@ -1,30 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import Icono from '../Home/Iconos';
+import { Personaje, colorDe } from './MapaIso';
 import './ModalRol.css';
 
-const SEGUNDOS = 5;
+const SEGUNDOS = 16;
 
 const ROLES = {
   HEROE: {
     titulo: 'HÉROE',
-    imagen: '/assets/iconos/heroe.png',
-    icono: 'check',
     lema: 'PROTEGE A TU EQUIPO',
     texto: 'EN ALGÚN MOMENTO DE LA PARTIDA APARECERÁ EL RETO HÉROE VS VERDUGO. CADA VEZ QUE PRESIONES EL BOTÓN ROJO, TU EQUIPO SUMA UN PUNTO.',
   },
   VERDUGO: {
     titulo: 'VERDUGO',
-    imagen: '/assets/iconos/verdugo.png',
-    icono: 'calavera',
     lema: 'SABOTEA AL RIVAL',
     texto: 'EN ALGÚN MOMENTO DE LA PARTIDA APARECERÁ EL RETO HÉROE VS VERDUGO. CADA VEZ QUE PRESIONES EL BOTÓN ROJO, EL EQUIPO RIVAL PIERDE UN PUNTO.',
   },
 };
 
-export default function ModalRol({ rol, username, equipoNumero, onCerrar }) {
+export default function ModalRol({ userId, rol, username, equipoNumero, onCerrar }) {
   const datos = ROLES[String(rol).toUpperCase()] ?? ROLES.HEROE;
   const [restante, setRestante] = useState(SEGUNDOS);
-  const [sinImagen, setSinImagen] = useState(false);
 
   const cerrarRef = useRef(onCerrar);
   cerrarRef.current = onCerrar;
@@ -51,11 +46,7 @@ export default function ModalRol({ rol, username, equipoNumero, onCerrar }) {
         <p className="mr-sup">{username ? `${username.toUpperCase()}, ` : ''}HAS SIDO ELEGIDO COMO</p>
 
         <div className="mr-retrato">
-          {!sinImagen ? (
-            <img src={datos.imagen} alt={datos.titulo} onError={() => setSinImagen(true)} />
-          ) : (
-            <Icono nombre={datos.icono} className="mr-retrato__icono" />
-          )}
+          <Personaje {...colorDe(userId)} />
         </div>
 
         <h2 className="mr-titulo">{datos.titulo}</h2>

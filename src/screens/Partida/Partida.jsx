@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icono from '../Home/Iconos';
 import { codigoDe } from '../Home/SalaCard';
-import MapaIso, { numeroDe } from './MapaIso';
+import MapaIso, { Personaje, colorDe, numeroDe } from './MapaIso';
 import ModalAcertijo from './ModalAcertijo';
+import { prepararSonido, reproducirEfecto } from '../Home/sonido';
 import ModalDesafio from './ModalDesafio';
 import ModalRol from './ModalRol';
 import PanelEspera from './PanelEspera';
+import ChatPartida from './ChatPartida';
 import { activarDemoReto, retoActivo } from '../../hooks/useReto';
 import { gameplayApi } from '../../services/gameplayApi';
 import { listarSalas, listarEquipos, unirseAEquipo } from '../../services/salasApi';
@@ -33,7 +35,7 @@ const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const textoRol = (r) => (typeof r === 'string' ? r : r?.rol ?? null);
 
-export default function Partida() {
+export default function Partida({ admin }) {
   const { salaId } = useParams();
   const matchId = salaId;
   const navegar = useNavigate();
@@ -57,6 +59,8 @@ export default function Partida() {
   const [aviso, setAviso] = useState('');
   const [feed, setFeed] = useState(null);
   const [panel, setPanel] = useState(false);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [chatNoLeidos, setChatNoLeidos] = useState(0);
   const [ajustes, setAjustes] = useState(false);
   const [grid, setGrid] = useState(false);
   const [salir, setSalir] = useState(false);
@@ -79,15 +83,15 @@ export default function Partida() {
 
   const miPos = posiciones[userId];
 
-  const nombreDe = useNombres([...(equipo?.miembros ?? []), ...Object.keys(posiciones)]);
+  const nombreDe = useNombres([...(equipo?.miembros ?? []), ...equipos.flatMap((e) => e.miembros), ...Object.keys(posiciones)]);
 
   function avisar(texto) {
     setAviso(texto);
     clearTimeout(tAviso.current);
     tAviso.current = setTimeout(() => setAviso(''), 2600);
   }
-  function anunciar(texto) {
-    setFeed(texto);
+  function anunciar(texto, jugadorId) {
+    setFeed({ texto, jugadorId });
     clearTimeout(tFeed.current);
     tFeed.current = setTimeout(() => setFeed(null), 4500);
   }
@@ -111,7 +115,14 @@ export default function Partida() {
             .filter((e) => e.miembros.length < e.cupoMaximo)
             .sort((a, b) => a.miembros.length - b.miembros.length)[0];
           if (!libre) throw new Error('TODOS LOS EQUIPOS ESTÁN LLENOS');
-          mio = await unirseAEquipo(libre.id, userId);
+          try {
+            mio = await unirseAEquipo(libre.id);
+          } catch (e) {
+            // 403: ya no está en la sala (un invitado que recarga sale de ella)
+            if (!e.esProhibido) throw e;
+            if (vivo) navegar('/home', { replace: true, state: { aviso: 'Saliste de la sala' } });
+            return;
+          }
         }
         if (!vivo) return;
         setEquipo(mio);
@@ -133,14 +144,14 @@ export default function Partida() {
       const m = await gameplayApi.mapa(matchId);
       setMapa(m);
       try {
-        const lista = await gameplayApi.posiciones(matchId, eqId, userId);
+        const lista = await gameplayApi.posiciones(matchId, eqId);
         if (!lista.some((p) => p.userId === userId)) throw Object.assign(new Error('no registrado'), { esNoEncontrado: true });
         setPosiciones(Object.fromEntries(lista.map((p) => [p.userId, p])));
       } catch (e) {
         if (e.esNoEncontrado) { setFase('esperando'); return false; } // partida no iniciada
         throw e;
       }
-      gameplayApi.registrarSesion(matchId, userId);
+      gameplayApi.registrarSesion(matchId);
       setFase('jugando');
       listarEquipos(salaId).then(setEquipos).catch(() => {});
 
@@ -150,7 +161,7 @@ export default function Partida() {
         .then((r) => { if (retoActivo(r.estado)) irAlReto(); }) // llegamos con el reto corriendo
         .catch(() => {});
 
-      gameplayApi.inventario(matchId, eqId, userId)
+      gameplayApi.inventario(matchId, eqId)
         .then((inv) => { invRef.current = inv.objetos; setInventario(inv.objetos); })
         .catch(() => {});
       gameplayApi.miRol(matchId, userId).then((r) => mostrarRol(r)).catch(() => {});
@@ -225,21 +236,24 @@ export default function Partida() {
     });
   }
 
+  // Los topics del equipo se escuchan solo con la partida en juego: el back da el permiso cuando los equipos
+  // ya quedaron fijos (en el lobby se pueden cambiar). Lo que pasó antes de entrar llega por REST en entrar().
+  const topicoEquipo = (topico) => (fase === 'jugando' && equipoId ? topico(matchId, equipoId) : null);
+
   // Roles: llegan a todo el equipo cuando arranca la partida
-  useSubscription(equipoId ? topics.roles(matchId, equipoId) : null, (msg) => {
+  useSubscription(topicoEquipo(topics.roles), (msg) => {
     mostrarRol(msg.roles?.[userId]);
-    if (faseRef.current !== 'jugando') alIniciarPartida();
   });
 
   // Posiciones de los compañeros
-  useSubscription(equipoId ? topics.posiciones(matchId, equipoId) : null, (p) => {
+  useSubscription(topicoEquipo(topics.posiciones), (p) => {
     if (p.userId === userId) {
       if (!p.conectado) { setErrorFatal('SALISTE DE LA PARTIDA'); setFase('error'); }
       return;
     }
     const antes = posRef.current[p.userId];
-    if (!p.conectado && antes) anunciar(`${nombreDe(p.userId)} SALIÓ DE LA PARTIDA`);
-    if (p.conectado && !antes) anunciar(`${nombreDe(p.userId)} ENTRÓ AL MAPA`);
+    if (!p.conectado && antes) anunciar(`${nombreDe(p.userId)} SALIÓ DE LA PARTIDA`, p.userId);
+    if (p.conectado && !antes) anunciar(`${nombreDe(p.userId)} ENTRÓ AL MAPA`, p.userId);
     const turno = (animRef.current[p.userId] ?? 0) + 1;
     animRef.current[p.userId] = turno;
     // Movimiento de varias celdas (click): se anima paso a paso como el propio, en vez de saltar
@@ -264,9 +278,9 @@ export default function Partida() {
   }
 
   // Inventario compartido del equipo
-  useSubscription(equipoId ? topics.inventario(matchId, equipoId) : null, (inv) => {
+  useSubscription(topicoEquipo(topics.inventario), (inv) => {
     const nuevos = inv.objetos.filter((o) => !invRef.current.some((v) => v.id === o.id));
-    nuevos.forEach((o) => anunciar(`${nombreDe(o.recolectadoPor)} RECOGIÓ ${o.nombre.toUpperCase()}`));
+    nuevos.forEach((o) => anunciar(`${nombreDe(o.recolectadoPor)} RECOGIÓ ${o.nombre.toUpperCase()}`, o.recolectadoPor));
     invRef.current = inv.objetos;
     setInventario(inv.objetos);
   });
@@ -280,6 +294,7 @@ export default function Partida() {
     retoVisto.current = true;
     if (acertijo) cerrarAcertijo();
     setPanel(false);
+    setChatAbierto(false);
     setAjustes(false);
     setVerRol(false);
     setDesafio(true);
@@ -293,6 +308,15 @@ export default function Partida() {
     setAjustes(false);
     try { await gameplayApi.devIniciarReto(matchId); } catch (e) { avisar(e.message.toUpperCase()); }
   }
+  async function iniciarCronometroDev() {
+    setAjustes(false);
+    try {
+      await gameplayApi.devIniciarTimer(matchId, 60);
+    } catch (e) {
+      avisar(e.message.toUpperCase());
+    }
+  }
+
   function simularReto() {
     activarDemoReto(true);
     abrirDesafio();
@@ -301,9 +325,11 @@ export default function Partida() {
   //MOVIMIENTO
   async function moverA(destino) {
     const yo = posRef.current[userId];
-    if (!yo || movRef.current || acertijo || fase !== 'jugando' || timeUp || resultado) return;
+    if (!mapa || !yo || movRef.current || acertijo || fase !== 'jugando' || timeUp || resultado) return;
     if (destino.x === yo.x && destino.y === yo.y) return;
     if (destino.x < 0 || destino.y < 0 || destino.x >= mapa.ancho || destino.y >= mapa.alto) return;
+
+    if (mapa.componentes.some(({ x, y }) => x === destino.x && y === destino.y)) return;
 
     movRef.current = true;
     setMoviendo(true);
@@ -332,13 +358,15 @@ export default function Partida() {
 
   async function interactuar() {
     if (!cercano || acertijo || movRef.current || resultado) return;
+    prepararSonido();
     try {
       if (cercano.tipo === 'ACERTIJO') {
-        const dto = await gameplayApi.abrirAcertijo(matchId, cercano.id, userId);
+        const dto = await gameplayApi.abrirAcertijo(matchId, cercano.id);
         if (dto.resuelto) setResueltos((s) => new Set(s).add(cercano.id));
         setAcertijo(dto);
       } else if (cercano.tipo === 'LLAVE') {
-        await gameplayApi.recolectar(matchId, cercano.id, userId);
+        await gameplayApi.recolectar(matchId, cercano.id);
+        reproducirEfecto('llave');
       } else if (cercano.tipo === 'PUERTA') {
         const llaves = inventario.length;
         avisar(llaves ? `TU EQUIPO TIENE ${llaves} LLAVE(S)` : 'LA PUERTA ESTÁ CERRADA · BUSCA LAS LLAVES');
@@ -354,14 +382,15 @@ export default function Partida() {
 
   function cerrarAcertijo() {
     if (acertijo && !resueltos.has(acertijo.componenteMapaId)) {
-      gameplayApi.cerrarAcertijo(matchId, acertijo.componenteMapaId, userId).catch(() => {});
+      gameplayApi.cerrarAcertijo(matchId, acertijo.componenteMapaId).catch(() => {});
     }
     setAcertijo(null);
   }
 
   function acertijoResuelto(componenteId) {
+    reproducirEfecto('acertijo');
     setResueltos((s) => new Set(s).add(componenteId));
-    anunciar(`${username} RESOLVIÓ EL ACERTIJO ${numeroDe(componenteId)}`);
+    anunciar(`${username} RESOLVIÓ EL ACERTIJO ${numeroDe(componenteId)}`, userId);
     setTimeout(() => setAcertijo(null), 1500);
   }
 
@@ -370,7 +399,7 @@ export default function Partida() {
     function onKey(e) {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === 'g' || e.key === 'G') { setGrid((v) => !v); return; }
-      if (e.key === 'Escape') { setPanel(false); setAjustes(false); setSalir(false); return; }
+      if (e.key === 'Escape') { setPanel(false); setChatAbierto(false); setAjustes(false); setSalir(false); return; }
       if (verRol || acertijo || salir || desafio || resultado || fase !== 'jugando') return;
       if (TECLAS[e.key] && posRef.current[userId]) {
         e.preventDefault();
@@ -401,7 +430,7 @@ export default function Partida() {
   return (
     <div className="pm-root">
       {/* ---------- MAPA ---------- */}
-      <div className="pm-mapa" style={{ '--pm-aspecto': ASPECTO, backgroundImage: `url(${FONDO})` }}>
+      <div className="pm-mapa" style={{ '--pm-aspecto': ASPECTO, '--pm-fondo': `url(${FONDO})` }}>
         {mapa && fase === 'jugando' && (
           <MapaIso
             mapa={mapa}
@@ -447,18 +476,34 @@ export default function Partida() {
         {ajustes && (
           <div className="pm-ajustes">
             <button onClick={() => setGrid(!grid)}>{grid ? 'OCULTAR' : 'MOSTRAR'} CUADRÍCULA (G)</button>
-            <button onClick={iniciarRetoDev}>INICIAR RETO AHORA (DEV)</button>
-            <button onClick={simularReto}>SIMULAR RETO SIN BACK (DEMO)</button>
+            {/* Solo el admin: el back rechaza /dev/** a los jugadores */}
+            {admin && fase === 'jugando' && <button onClick={iniciarCronometroDev}>INICIAR CRONÓMETRO DE 60 S (DEV)</button>}
+            {admin && <button onClick={iniciarRetoDev}>INICIAR RETO AHORA (DEV)</button>}
+            {admin && <button onClick={simularReto}>SIMULAR RETO SIN BACK (DEMO)</button>}
             <button onClick={() => { setAjustes(false); setSalir(true); }}>SALIR DE LA PARTIDA</button>
           </div>
         )}
 
         {/* Pestaña del panel */}
-        <button className={`pm-tab-panel ${panel ? 'abierto' : ''}`} onClick={() => setPanel(!panel)}>
+        <button className={`pm-tab-panel ${panel || chatAbierto ? 'abierto' : ''}`}
+                onClick={() => { setPanel(!panel); setChatAbierto(false); }}>
           {nuevosEnPanel > 0 && <span className="pm-badge">{nuevosEnPanel}</span>}
           <span className="pm-tab-panel__txt">PANEL</span>
           <Icono nombre={panel ? 'derecha' : 'izquierda'} />
         </button>
+        {/* Pestaña del chat: comparte el lado derecho con el panel, se abre uno a la vez */}
+        {fase === 'jugando' && equipo && (
+          <>
+            <button className={`pm-tab-panel pm-tab-chat ${panel || chatAbierto ? 'abierto' : ''}`}
+                    onClick={() => { setChatAbierto(!chatAbierto); setPanel(false); }}>
+              {chatNoLeidos > 0 && <span className="pm-badge">{chatNoLeidos}</span>}
+              <span className="pm-tab-panel__txt">CHAT</span>
+              <Icono nombre="sobre" />
+            </button>
+            <ChatPartida matchId={matchId} equipoId={equipo.id} userId={userId}
+                         abierto={chatAbierto} onNoLeidos={setChatNoLeidos} />
+          </>
+        )}
         {panel && (
           <aside className="pm-panel">
             <p className="pm-panel__titulo">INVENTARIO DEL EQUIPO</p>
@@ -492,7 +537,7 @@ export default function Partida() {
               const etiqueta = fase === 'jugando' ? 'AUSENTE' : 'NO LISTO';
               return (
                 <div key={id} className="pm-equipo__fila">
-                  <span className="pm-equipo__avatar"><Icono nombre="persona" /></span>
+                  <span className="pm-equipo__avatar"><Personaje {...colorDe(id)} /></span>
                   <span className="pm-equipo__datos">
                     <span className="pm-equipo__nombre">{nombreDe(id)}{id === userId && rol ? ` · ${rol === 'VERDUGO' ? 'VERDUGO' : 'HÉROE'}` : ''}</span>
                     {!ok && <small>{etiqueta}</small>}
@@ -512,8 +557,8 @@ export default function Partida() {
         {/* Noticias del equipo */}
         {feed && (
           <div className="pm-feed">
-            <span className="pm-feed__avatar"><Icono nombre="persona" /></span>
-            {feed}
+            <span className="pm-feed__avatar">{feed.jugadorId && <Personaje {...colorDe(feed.jugadorId)} />}</span>
+            {feed.texto}
           </div>
         )}
 
@@ -574,19 +619,19 @@ export default function Partida() {
         <ModalAcertijo
           dto={acertijo}
           matchId={matchId}
-          userId={userId}
           onCerrar={cerrarAcertijo}
           onResuelto={acertijoResuelto}
         />
       )}
 
       {verRol && rol && !resultado && (
-        <ModalRol rol={rol} username={username} equipoNumero={equipo?.numero} onCerrar={() => setVerRol(false)} />
+        <ModalRol userId={userId} rol={rol} username={username} equipoNumero={equipo?.numero} onCerrar={() => setVerRol(false)} />
       )}
 
       {desafio && !resultado && (
         <ModalDesafio
           miEquipo={equipo}
+          nombreDe={nombreDe}
           rival={equipos.find((e) => e.id !== equipoId && e.miembros.length)}
           miRol={rol}
           segundos={5} // el back cuenta estos 5 s dentro del reto (RETO_DURACION=25s): quedan 20 s de juego

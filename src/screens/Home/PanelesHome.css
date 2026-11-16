@@ -1,0 +1,109 @@
+.home-paneles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  align-items: start;
+  gap: var(--home-gap);
+}
+.home-panel {
+  min-width: 0;
+  display: grid;
+  justify-items: stretch;
+  gap: 0.85rem;
+  padding: clamp(0.75rem, 1.8vw, 1.5rem);
+  overflow-wrap: anywhere;
+}
+.home-panel--estrecho { width: min(100%, 38rem); }
+.home-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffd384;
+  font-size: clamp(1rem, 1.55vw, 1.3rem);
+  font-weight: normal;
+  margin: 0;
+}
+.home-panel .btn { justify-self: start; padding-inline: 0.75rem; }
+.home-panel label { color: #ffd384; }
+.home-ayuda { color: #d4c2a5; font-size: var(--home-detalle); }
+.home-campo, .home-form input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.65rem;
+  color: var(--h-crema);
+  background: #16100b;
+  border: 1px solid #a98650;
+}
+.home-form, .home-lista { display: grid; gap: 0.6rem; }
+.home-lista { list-style: none; margin: 0; padding: 0; }
+.home-form .btn { margin-top: 0.25rem; }
+.home-lista li, .home-opcion, .home-perfil-datos > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  background: #1c1510;
+  border: 1px solid #62503b;
+}
+.home-lista li span, .home-opcion span { flex: 1 1 7rem; min-width: 0; }
+.home-opcion { cursor: pointer; }
+.home-opcion small { display: block; margin-top: 0.25rem; color: var(--h-crema); font-size: var(--home-detalle); }
+.home-opcion input { flex: none; width: 1.35rem; height: 1.35rem; accent-color: var(--h-dorado); }
+.home-perfil-datos { display: grid; gap: 0.5rem; margin: 0; }
+.home-perfil-datos dd { color: #ffd384; min-width: 0; margin: 0; }
+.home-chat-flotante {
+  position: fixed;
+  z-index: 20;
+  inset-inline-end: var(--home-gap);
+  bottom: var(--home-gap);
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+  width: min(25rem, calc(100% - 2 * var(--home-gap)));
+  pointer-events: none;
+}
+.home-chat-flotante > * { pointer-events: auto; }
+.home-chat {
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--home-gap) - 3.25rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.home-chat[hidden] { display: none; }
+.home-chat__cabecera { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.home-chat__cabecera h2 { margin: 0; color: #ffd384; font-size: 1.1rem; font-weight: normal; }
+.home-chat__cerrar { width: 2.5rem; font-size: 1.3rem; }
+.home-chat .ch { flex: 1; }
+.home-chat .ch-lista { min-height: 3rem; max-height: 19rem; }
+.home-chat .ch-form { flex-shrink: 0; }
+.home-chat__abrir { min-height: 2.75rem; padding-inline: 0.9rem; color: #2a1d0e; background: var(--h-dorado); border-color: var(--h-dorado-luz); }
+
+.home-vista--ajustes { display: flex; }
+.home-ajustes { width: min(100%, 48rem); margin: auto; }
+.home-ajustes__grupo { display: grid; gap: 0.45rem; min-width: 0; }
+.home-ajustes__volumen { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.home-ajustes__volumen label { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem; }
+.home-ajustes__volumen input { width: 100%; min-width: 0; }
+.home-ajustes__prueba { padding-inline: 0.65rem; font-size: 0.8rem; }
+.home-ajustes :disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 38rem) {
+  .home-ajustes__volumen { grid-template-columns: minmax(0, 1fr); }
+  .home-ajustes__prueba { justify-self: start; }
+}
+
+.home-vista--ajustes { padding-bottom: 0.75rem; }
+.home-ajustes { width: min(100%, 58rem); padding: clamp(0.75rem, 1.5vw, 1.15rem); gap: 0.65rem; }
+.home-ajustes .home-opcion { padding: 0.5rem 0.6rem; line-height: 1.35; }
+.home-ajustes .home-opcion small { margin-top: 0.2rem; }
+.home-ajustes__grupo h2 { font-size: clamp(1rem, 1.35vw, 1.2rem); }
+@media (min-width: 66rem) {
+  .home-ajustes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-ajustes__grupo:first-child { grid-row: span 2; align-content: start; }
+  .home-ajustes > .home-ayuda { grid-column: 1 / -1; }
+}

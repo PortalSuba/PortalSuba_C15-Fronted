@@ -1,10 +1,23 @@
 import { http } from './http';
 import { Sesion } from './sesion';
+import { salir } from './auth';
 
-export async function login(username) {
-  const sesion = await http.post('/api/auth/login', { username: username.trim() });
-  Sesion.iniciar(sesion);
-  return sesion;
+/** Trae el perfil de la cuenta con la que se entró. null: es nueva y aún no eligió nombre de jugador. */
+export async function cargarPerfil() {
+  try {
+    const perfil = await http.get('/api/perfil');
+    Sesion.iniciar(perfil);
+    return perfil;
+  } catch (e) {
+    if (e.esNoEncontrado) return null;
+    throw e;
+  }
+}
+
+export async function registrarNombre(username) {
+  const perfil = await http.post('/api/perfil', { username: username.trim() });
+  Sesion.iniciar(perfil);
+  return perfil;
 }
 
 export function sesionActual() {
@@ -13,6 +26,7 @@ export function sesionActual() {
 
 export function logout() {
   Sesion.limpiar();
+  return salir();
 }
 
-export const authApi = { login, sesionActual, logout };
+export const authApi = { cargarPerfil, registrarNombre, sesionActual, logout };

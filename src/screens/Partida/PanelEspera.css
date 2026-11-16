@@ -66,6 +66,13 @@
 .pe-cuenta__txt { font-size: calc(var(--u) * 1); opacity: 0.8; }
 @keyframes pe-latido { 50% { transform: scale(1.12); } }
 
+/* Equipos a la izquierda y chat a la derecha; en pantallas angostas, uno debajo del otro */
+.pe-cuerpo { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: calc(var(--u) * 1.4); }
+.pe-columna { display: flex; flex-direction: column; gap: calc(var(--u) * 1.4); min-width: 0; }
+@container (max-width: 800px) {
+  .pe-cuerpo { grid-template-columns: minmax(0, 1fr); }
+}
+
 .pe-contador { text-align: center; font-size: calc(var(--u) * 1.2); color: #c9963c; }
 .pe-contador b { color: #f6d98a; font-weight: normal; }
 
@@ -135,3 +142,17 @@
 .pe-boton--gris { background: linear-gradient(#8a7f72, #4d453c); color: #f1dfb8; }
 .pe-boton--cafe { background: linear-gradient(#b0703a, #7a4720); color: #f1dfb8; }
 .pe-boton--oro { background: linear-gradient(#f6d98a, #b9852c); color: #2a1a10; }
+:root .pe-panel--cuenta {
+  width: min(52rem, calc(100vw - 2rem));
+  padding-top: clamp(0.75rem, 2vh, 1.25rem);
+  gap: clamp(0.45rem, 1.35vh, 0.8rem);
+}
+.pe-panel--cuenta .pe-titulo { line-height: 1.45; }
+.pe-panel--cuenta .pe-codigo { padding-block: 0.45rem; }
+.pe-panel--cuenta .pe-cuenta__num { font-size: clamp(2rem, 7vh, 3.5rem); }
+.pe-panel--cuenta .pe-cuerpo > .ch .ch-lista { min-height: 4rem; max-height: 6rem; }
+.pe-panel--cuenta .pe-equipos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pe-panel--cuenta .pe-jugador { flex-wrap: wrap; gap: 0.2rem 0.5rem; }
+@media (max-width: 30rem) {
+  .pe-panel--cuenta .pe-equipos { grid-template-columns: minmax(0, 1fr); }
+}

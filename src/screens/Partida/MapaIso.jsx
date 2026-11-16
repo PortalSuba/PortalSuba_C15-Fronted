@@ -15,7 +15,7 @@ const PIELES = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524'];
 export function colorDe(id) {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return { ropa: COLORES[h % COLORES.length], piel: PIELES[(h >> 3) % PIELES.length] };
+  return { ropa: COLORES[h % COLORES.length], piel: PIELES[(h >>> 3) % PIELES.length], variante: (h >>> 8) % 4 };
 }
 export const numeroDe = (componenteId) => componenteId.split('-')[1];
 
@@ -54,21 +54,40 @@ export default function MapaIso({
     }
   }
 
+  const objetos = useMemo(() => {
+    const sprite = 3.8;
+    const separacionX = sprite + 0.35;
+    const separacionY = sprite * 30 / 24 * 16 / 9 + 0.35;
+    const ubicados = [];
+    for (const componente of mapa.componentes) {
+      const { left, top } = aPantalla(componente.x, componente.y);
+      const vecinos = ubicados.filter((objeto) => Math.abs(objeto.top - top) < separacionY);
+      const candidatos = [left, ...vecinos.flatMap((objeto) => [
+        objeto.left - separacionX, objeto.left + separacionX,
+      ])].sort((a, b) => Math.abs(a - left) - Math.abs(b - left));
+      const x = candidatos.find((candidato) => vecinos.every((objeto) =>
+        Math.abs(candidato - objeto.left) >= separacionX - 0.001
+      ));
+      ubicados.push({ componente, left: x ?? left, top, sprite });
+    }
+    return ubicados;
+  }, [mapa]);
+
   return (
     <>
       <div className={`pm-celdas ${moviendo ? 'moviendo' : ''}`}>{celdas}</div>
 
       {/* Componentes del mapa */}
-      {mapa.componentes.map((c) => {
+      {objetos.map(({ componente: c, left, top, sprite }) => {
         if (ocultos.has(c.id)) return null;
-        const { left, top } = aPantalla(c.x, c.y);
         const esCercano = cercano?.id === c.id;
         const resuelto = resueltos.has(c.id);
         return (
           <div
             key={c.id}
             className={`pm-objeto pm-obj-${c.tipo.toLowerCase()} ${esCercano ? 'cercano' : ''} ${resuelto ? 'resuelto' : ''}`}
-            style={{ left: `${left}%`, top: `${top}%`, zIndex: esCercano ? 200 : 10 + c.x + c.y }}
+            style={{ left: `${left}%`, top: `${top}%`, zIndex: esCercano ? 200 : 10 + 2 * (c.x + c.y),
+              '--pm-sprite-ancho': sprite + 'cqw' }}
           >
             <Sprite tipo={c.tipo} resuelto={resuelto} />
             {esCercano && <Burbuja componente={c} resuelto={resuelto} onInteractuar={onInteractuar} />}
@@ -80,15 +99,14 @@ export default function MapaIso({
       {jugadores.map((j) => {
         const { left, top } = aPantalla(j.x, j.y);
         const yo = j.userId === userId;
-        const { ropa, piel } = colorDe(j.userId);
         return (
           <div
             key={j.userId}
             className={`pm-jugador ${yo ? 'yo' : ''}`}
-            style={{ left: `${left}%`, top: `${top}%`, zIndex: 10 + j.x + j.y + 0.5 }}
+            style={{ left: `${left}%`, top: `${top}%`, zIndex: 11 + 2 * (j.x + j.y) }}
           >
             <span className="pm-jugador__nombre">{nombreDe(j.userId)}</span>
-            <Personaje ropa={ropa} piel={piel} />
+            <Personaje {...colorDe(j.userId)} />
             <span className="pm-jugador__sombra" />
           </div>
         );
@@ -118,56 +136,63 @@ function Burbuja({ componente, resuelto, onInteractuar }) {
   );
 }
 
-export function Personaje({ ropa, piel }) {
+export function Personaje({ ropa, piel, variante = 0 }) {
+  const cabello = ['#49312b', '#251c20', '#a05d37', '#36293b'][variante];
   return (
-    <svg className="pm-personaje" viewBox="0 0 10 14" shapeRendering="crispEdges" aria-hidden="true">
-      <path d="M3 0h4v1H3zM2 1h6v2H2z" fill="#3b2a1a" />
-      <path d="M2 3h6v3H2z" fill={piel} />
-      <path d="M3 4h1v1H3zM6 4h1v1H6z" fill="#1a1a1a" />
-      <path d="M2 6h6v4H2z" fill={ropa} />
-      <path d="M1 7h1v3H1zM8 7h1v3H8z" fill={ropa} opacity="0.75" />
-      <path d="M1 10h1v1H1zM8 10h1v1H8z" fill={piel} />
-      <path d="M3 10h1v3H3zM6 10h1v3H6z" fill="#2a2018" />
+    <svg className="pm-personaje" viewBox="0 0 20 26" shapeRendering="crispEdges" aria-hidden="true">
+      <path fill="#211619" d="M6 0h8v1h2v2h2v8h-2v2h2v2h2v7h-4v4h-5v-3H9v3H4v-4H0v-7h2v-2h2v-2H2V3h2V1h2z" />
+      <path fill={cabello} d="M6 1h8v1h2v2h1v4h-3V5H9v1H5v3H3V4h2V2h1z" />
+      <path fill={piel} d="M5 7h4V6h5v3h2v2h-2v2H6v-2H4V9h1zM1 19h3v2H1zM16 19h3v2h-3z" />
+      <path fill="#352320" d="M6 9h1v1H6zM12 9h1v1h-1zM9 11h2v1H9z" />
+      <path fill={ropa} d="M4 13h4v1h4v-1h4v1h2v2h1v3h-3v-2h-1v5H5v-5H4v2H1v-3h1v-2h2z" />
+      <path fill="#26202a" opacity=".45" d="M14 15h2v6h-2zM2 16h2v3H2zM5 20h10v2H5z" />
+      <path fill="#dbc28a" d="M6 14h1v5H6zM12 14h1v5h-1zM9 20h2v1H9z" />
+      <path fill="#77564c" d="M5 22h4v2H5zM11 22h4v2h-4z" />
+      <path fill="#b1835d" d="M4 24h5v1H4zM11 24h5v1h-5z" />
+      {variante === 1 && <path fill="#ae855d" d="M4 3h12v2h2v2H2V5h2z" />}
+      {variante === 2 && <path fill="#cc6652" d="M5 12h10v2H5zM13 14h2v3h-2z" />}
+      {variante === 3 && <path fill="#ecd690" d="M5 8h4v2H5zM11 8h4v2h-4z" />}
     </svg>
   );
 }
 
 function Sprite({ tipo, resuelto }) {
-  if (tipo === 'ACERTIJO') {
-    return (
-      <svg className="pm-sprite" viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden="true">
-        <path d="M3 0h2v2H3zM0 3h2v2H0zM6 3h2v2H6zM3 6h2v2H3z" fill={resuelto ? '#6fd46a' : '#ffe08a'} />
-        <path d="M2 2h4v4H2z" fill={resuelto ? '#4f8a47' : '#f0b429'} />
-        <path d="M3 3h2v2H3z" fill="#fff8dc" />
-      </svg>
-    );
-  }
-  if (tipo === 'LLAVE') {
-    return (
-      <svg className="pm-sprite" viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden="true">
-        <path d="M0 2h3v3H0zM3 3h5v1H3zM6 4h1v2H6zM4 4h1v1H4z" fill="#f0b429" />
-        <path d="M1 3h1v1H1z" fill="#5a3a12" />
-      </svg>
-    );
-  }
-  if (tipo === 'PUERTA') {
-    return (
-      <svg className="pm-sprite pm-sprite-alto" viewBox="0 0 8 10" shapeRendering="crispEdges" aria-hidden="true">
-        <path d="M1 0h6v10H1z" fill="#5a3a1f" />
-        <path d="M2 1h4v9H2z" fill="#7a5230" />
-        <path d="M5 5h1v1H5z" fill="#f0b429" />
-      </svg>
-    );
-  }
-  // OBSTACULO: pilar marrón (capitel, fuste con estrías y base)
   return (
-    <svg className="pm-sprite pm-sprite-pilar" viewBox="0 0 8 12" shapeRendering="crispEdges" aria-hidden="true">
-      <path d="M0 0h8v2H0zM0 10h8v2H0z" fill="#5a3a1f" />
-      <path d="M0 0h8v1H0zM0 10h8v1H0z" fill="#7a5230" />
-      <path d="M1 2h6v8H1z" fill="#6b4a2b" />
-      <path d="M1 2h2v8H1z" fill="#8a6440" />
-      <path d="M6 2h1v8H6z" fill="#4a3220" />
-      <path d="M4 3h1v6H4z" fill="#4a3220" />
+    <svg className="pm-sprite" viewBox="0 0 24 30" shapeRendering="crispEdges" aria-hidden="true">
+      {tipo === 'PUERTA' ? (
+        <>
+          <path fill="#291913" d="M2 30V8h2V5h3V2h10v3h3v3h2v22z" />
+          <path fill="#96704a" d="M4 29V9h2V6h3V4h6v2h3v3h2v20z" />
+          <path fill="#553426" d="M6 28V10h2V7h8v3h2v18z" />
+          <path fill="#795038" d="M7 11h3v16H7zM12 8h3v19h-3z" />
+          <path fill="#36231d" d="M6 13h12v2H6zM6 24h12v2H6zM0 28h24v2H0z" />
+          <path fill="#e5b068" d="M15 18h2v3h-2z" />
+        </>
+      ) : tipo === 'ACERTIJO' ? (
+        <>
+          <path fill="#301e14" d="M4 18h3V9h2V7h8v2h3v9h2v10h-3v2H3v-2H1V20h3z" />
+          <path fill="#886047" d="M4 20h16v6H4zM3 27h18v2H3z" />
+          <path fill="#b88b62" d="M9 9h8v2h2v8H7v-8h2z" />
+          {resuelto
+            ? <path fill="#c7ff9e" d="M8 14h2v2h2v-2h2v-2h3v2h-2v2h-2v2h-3v-2H8z" />
+            : <path fill="#f2c263" d="M10 10h5v1h2v2h-2v2h-2v2h-2v-3h3v-2h-4zM11 18h2v2h-2z" />}
+          <path fill="#5f3b2c" d="M7 22h10v3H7z" />
+        </>
+      ) : tipo === 'LLAVE' ? (
+        <>
+          <path fill="#372419" d="M2 23h3v-3h14v3h3v7H2z" />
+          <path fill="#8b6040" d="M5 21h14v3H5zM4 25h16v3H4z" />
+          <path fill="#744918" d="M4 13h8v2h10v6h-3v2h-3v-3h-4v2H4z" />
+          <path fill="#f3c46b" d="M5 14h6v2h10v3h-2v2h-2v-3h-6v3H5z" />
+          <path fill="#744918" d="M7 16h2v3H7z" />
+        </>
+      ) : (
+        <>
+          <path fill="#39271e" d="M3 9h18v6h-3v10h3v5H3v-5h3V15H3z" />
+          <path fill="#9d7758" d="M5 10h14v3H5zM7 15h10v10H7zM5 26h14v2H5z" />
+          <path fill="#6a4b38" d="M10 15h2v10h-2zM14 15h3v10h-3z" />
+        </>
+      )}
     </svg>
   );
 }

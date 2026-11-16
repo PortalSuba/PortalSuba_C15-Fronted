@@ -1,0 +1,177 @@
+.adm-root {
+  --adm-texto: #f1dfbf;
+  --adm-acento: #d6adfa;
+  --adm-borde: #815ba0;
+  --adm-fondo: #201629;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: clamp(12rem, 23vw, 18rem) minmax(0, 1fr);
+  align-content: start;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: linear-gradient(#14102170, #100b17ae), url('/assets/fondos/fondo_admin.jpeg') center / cover #120b1a;
+  color: var(--adm-texto);
+  font: 1rem/1.45 'Silkscreen', monospace;
+}
+.adm-root *, .adm-root *::before { box-sizing: border-box; }
+.adm-lateral, .adm-nav, .adm-contenido { display: grid; align-content: start; gap: 0.75rem; min-width: 0; }
+.adm-lateral { grid-template-columns: minmax(0, 1fr); }
+.adm-carnet, .adm-panel, .adm-indicador {
+  min-width: 0;
+  padding: clamp(0.75rem, 1.5vw, 1.25rem);
+  border: 2px solid var(--adm-borde);
+  background: var(--adm-fondo);
+  box-shadow: inset 0 0 0 3px #130e1c, 3px 4px #0008;
+}
+.adm-carnet { display: grid; gap: 0.5rem; overflow-wrap: anywhere; }
+.adm-carnet strong { color: var(--adm-texto); }
+.adm-sello { color: #e3baff; font-weight: bold; }
+.adm-root h1, .adm-root h2, .adm-root p { margin: 0; }
+.adm-root h1 { font: clamp(1rem, 2.5vw, 1.8rem)/1.65 'Press Start 2P', monospace; color: var(--adm-acento); text-shadow: 3px 3px #110b16; }
+.adm-root h2 { font-size: 1.125rem; color: var(--adm-acento); }
+.adm-periodos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.adm-boton, .adm-acceso a, .adm-enlace-home, .adm-aviso a, .adm-aviso button, .adm-tecnico button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #9876b5;
+  box-shadow: inset 0 -3px #1c1128;
+  color: #f7e8ff;
+  background: #3f2854;
+  font: inherit;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+}
+.adm-boton[aria-current], .adm-boton[aria-pressed="true"] { background: #643f85; border-color: #d6adfa; }
+.adm-boton:disabled { opacity: 0.65; cursor: wait; }
+.adm-boton:hover, .adm-acceso a:hover, .adm-enlace-home:hover, .adm-aviso a:hover { filter: brightness(1.2); }
+.adm-boton:focus-visible, .adm-buscar input:focus-visible, .adm-acceso a:focus-visible, .adm-enlace-home:focus-visible { outline: 2px solid #edd486; outline-offset: 2px; }
+.adm-salir { background: #642d42; }
+.adm-panel { display: grid; gap: 0.75rem; overflow-wrap: anywhere; }
+.adm-panel > button { justify-self: start; }
+.adm-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 0.6rem; }
+.adm-indicador { display: grid; justify-items: center; align-content: space-between; gap: 0.6rem; text-align: center; }
+.adm-indicador strong { color: #ffd88b; font-size: 1.4rem; line-height: 1.1; }
+.adm-graficas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 0.75rem; }
+.adm-barras, .adm-registros, .adm-tiempo { margin: 0; padding: 0; list-style: none; }
+.adm-barras, .adm-registros { display: grid; gap: 0.65rem; }
+.adm-barras li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.5rem; }
+.adm-pista { grid-column: 1 / -1; background: #120c19; height: 0.5rem; }
+.adm-pista i { display: block; height: 100%; background: #aa76d3; }
+.adm-tiempo { display: flex; align-items: end; gap: 1px; height: 8rem; border-bottom: 1px solid var(--adm-borde); }
+.adm-tiempo li { position: relative; flex: 1 1 0; min-width: 0; background: #ae77d8; }
+.adm-lectura { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.adm-tabla-contenedor { overflow-x: auto; }
+.adm-tabla { border-collapse: collapse; width: 100%; text-align: left; white-space: nowrap; }
+.adm-tabla :is(th, td) { padding: 0.55rem 0.6rem; border-bottom: 1px solid #523762; }
+.adm-tabla th { color: var(--adm-acento); }
+.adm-estado--0 { color: #ffa5a0; }
+.adm-estado--1 { color: #ffda87; }
+.adm-estado--2 { color: #a9e1a0; }
+.adm-buscar { display: grid; grid-template-columns: minmax(0, 24rem) auto; justify-content: start; gap: 0.5rem; }
+.adm-buscar label { grid-column: 1 / -1; }
+.adm-buscar input { min-width: 0; background: #110c18; border: 1px solid var(--adm-borde); color: inherit; padding: 0.4rem 0.6rem; font: inherit; }
+.adm-secundario { color: #dac5e8; font-size: 0.875rem; }
+.adm-registro { border: 1px solid #815ba0; background: #140e1c; padding: 0.65rem; }
+.adm-registro__cabecera { display: flex; flex-wrap: wrap; gap: 0.3rem 0.65rem; margin-bottom: 0.4rem; color: #dfbafa; }
+.adm-registro pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 0.875rem/1.5 monospace; }
+.adm-registro summary { cursor: pointer; }
+.adm-skeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: 0.65rem; }
+.adm-skeleton i { min-height: 5rem; border: 1px solid #726979; background: #3b343f; }
+.adm-enlace-home { font-size: 0.875rem; }
+.adm-acceso, .adm-aviso {
+  position: fixed;
+  z-index: 32;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  max-width: calc(100% - 1rem);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  background: #201629;
+  border: 1px solid #9876b5;
+  color: #f5e4ff;
+  padding: 0.35rem 0.5rem;
+  font: 0.875rem/1.4 'Silkscreen', monospace;
+}
+.adm-acceso { bottom: 0.5rem; }
+.adm-aviso { top: 0.55rem; z-index: 49; }
+.adm-acceso a, .adm-aviso :is(a, button), .adm-tecnico button { min-height: 2rem; }
+.adm-tecnico { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.7rem; padding: 0.35rem; border: 1px solid #9876b5; color: #f5e4ff; background: #201629; font-size: 0.875rem; }
+.adm-tecnico code { overflow-wrap: anywhere; }
+@media (max-width: 48rem) {
+  .adm-root { grid-template-columns: minmax(0, 1fr); }
+  .adm-lateral { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-carnet, .adm-nav { grid-column: 1 / -1; }
+  .adm-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.carnet__sello-admin {
+  margin-inline-start: auto;
+  padding-inline: 0.35rem;
+  color: #f6dcff;
+  background: #43265a;
+  border: 1px solid #c99de9;
+}
+.home-nav-encabezado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem; }
+.home-nav-encabezado .adm-enlace-home { min-height: 2rem; }
+
+.adm-cabecera, .adm-vista, .adm-lateral__acciones {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: 0.75rem;
+}
+.adm-cabecera {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding-block-end: 0.65rem;
+  border-bottom: 1px solid var(--adm-borde);
+}
+.adm-root h1 { font-size: clamp(1rem, 1.65vw, 1.45rem); overflow-wrap: anywhere; }
+.adm-periodos .adm-boton { min-width: 5.25rem; }
+.adm-busqueda { width: min(100%, 52rem); justify-self: center; }
+.adm-buscar { grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; }
+.adm-vista--busqueda > .adm-busqueda { width: min(100%, 40rem); }
+.adm-vista { padding: 0.2rem 0.3rem 0.45rem; }
+
+@media (min-width: 48.0625rem) and (min-height: 30rem) {
+  .adm-root {
+    align-content: stretch;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: clamp(13rem, 23vw, 23rem) minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .adm-lateral { grid-template-rows: auto minmax(0, 1fr) auto; align-content: stretch; }
+  .adm-lateral .adm-nav { align-self: center; }
+  .adm-contenido { min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
+  .adm-vista { min-height: 0; overflow-y: auto; }
+  .adm-vista--busqueda { align-content: safe center; }
+}
+
+@media (max-width: 68rem) {
+  .adm-cabecera { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 48rem) {
+  .adm-lateral__acciones { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.adm-carnet {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.adm-carnet__datos { min-width: 0; display: grid; gap: 0.3rem; }
+.adm-retrato {
+  display: block;
+  width: clamp(3rem, 6vw, 4.5rem);
+  border: 2px solid #9876b5;
+  box-shadow: 2px 3px #100b17;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icono from '../Home/Iconos';
 import { Personaje, colorDe } from '../Partida/MapaIso';
@@ -8,11 +8,12 @@ import { Sesion } from '../../services/sesion';
 import { useConexion } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { useReto, activarDemoReto, esDemoReto, retoActivo } from '../../hooks/useReto';
+import ChatPartida from '../Partida/ChatPartida';
 import './RetoHeroeVerdugo.css';
 
 const FONDO = '/assets/fondos/Fondo_Reto.jpeg';
 const ASPECTO = 16 / 9;
-const VOLVER_EN = 8;
+const VOLVER_EN = 10;
 
 const BANCO_IZQ = [[16, 57], [21, 53], [26, 49], [31, 45]];
 const BANCO_DER = [[69, 45], [74, 49], [79, 53], [84, 57]];
@@ -69,25 +70,20 @@ function Arena({ matchId, equipos, roles }) {
   const userId = Sesion.userId;
   const conectado = useConexion();
   const miEquipo = equipos.find((e) => e.miembros.includes(userId));
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const [chatNoLeidos, setChatNoLeidos] = useState(0);
   const rival = equipos.find((e) => e.id !== miEquipo?.id);
   const miRol = roles[userId] ?? null;
   const { reto, misClics, presionar, demo } = useReto(matchId, {
-    userId, miEquipoId: miEquipo?.id, miRol, equipoIds: equipos.map((e) => e.id),
+    miEquipoId: miEquipo?.id, miRol, equipoIds: equipos.map((e) => e.id),
   });
   const [sonido, setSonido] = useState(true);
-  const [aviso, setAviso] = useState('');
-  const tAviso = useRef(null);
 
   const nombreDe = useNombres(equipos.flatMap((e) => e.miembros));
   const numeroDe = (equipoId) => equipos.find((e) => e.id === equipoId)?.numero ?? '?';
   const activo = retoActivo(reto.estado);
   const terminado = reto.estado === 'TERMINADO';
-
-  function avisar(t) {
-    setAviso(t);
-    clearTimeout(tAviso.current);
-    tAviso.current = setTimeout(() => setAviso(''), 2500);
-  }
+  const ganoMiEquipo = Boolean(miEquipo && reto.equipoGanadorId === miEquipo.id);
 
   function volver() {
     activarDemoReto(false);
@@ -108,7 +104,7 @@ function Arena({ matchId, equipos, roles }) {
     : reto.equipoGanadorId ? `GANA EL EQUIPO ${numeroDe(reto.equipoGanadorId)}` : 'EMPATE';
 
   return (
-    <div className="rt-root">
+    <div className={terminado ? "rt-root rt-root--resultado" : "rt-root"}>
       {/* ---------- ESCENARIO ---------- */}
       <div className="rt-escenario" style={{ '--rt-aspecto': ASPECTO, backgroundImage: `url(${FONDO})` }}>
         <span className={`rt-pedestal ${activo ? 'activo' : ''}`} style={{ left: `${PEDESTAL[0]}%`, top: `${PEDESTAL[1]}%` }} />
@@ -117,7 +113,6 @@ function Arena({ matchId, equipos, roles }) {
           eq.miembros.map((id, i) => {
             const lado = ei === 0 ? 'izq' : 'der';
             const [x, y] = (lado === 'izq' ? BANCO_IZQ : BANCO_DER)[i % 4];
-            const { ropa, piel } = colorDe(id);
             const rol = roles[id];
             return (
               <div
@@ -126,7 +121,7 @@ function Arena({ matchId, equipos, roles }) {
                 style={{ left: `${x}%`, top: `${y}%`, zIndex: Math.round(y) }}
               >
                 <span className="rt-jugador__nombre">{nombreDe(id)}</span>
-                <Personaje ropa={ropa} piel={piel} />
+                <Personaje {...colorDe(id)} />
                 <span className="rt-jugador__sombra" />
               </div>
             );
@@ -153,15 +148,25 @@ function Arena({ matchId, equipos, roles }) {
           <button className="rt-cuadro" onClick={() => setSonido(!sonido)} title="Sonido">
             <Icono nombre={sonido ? 'sonido' : 'mute'} />
           </button>
-          <button className="rt-cuadro rt-rojo" onClick={volver} title="Volver a la partida">
-            <Icono nombre="salir" />
-          </button>
+          {/* Mientras hay reto nadie vuelve antes: seria ventaja sobre los que siguen aquí */}
+          {!activo && !terminado && (
+            <button className="rt-cuadro rt-rojo" onClick={volver} title="Volver a la partida">
+              <Icono nombre="salir" />
+            </button>
+          )}
         </div>
 
-        <button className="rt-tab-chat" onClick={() => avisar('EL CHAT NO ESTÁ DISPONIBLE EN ESTA VERSIÓN')}>
-          <span>CHAT</span>
-          <Icono nombre="sobre" />
-        </button>
+        {miEquipo && !demo && (
+          <>
+            <button className={`rt-tab-chat ${chatAbierto ? 'abierto' : ''}`} onClick={() => setChatAbierto(!chatAbierto)}>
+              {chatNoLeidos > 0 && <span className="pm-badge">{chatNoLeidos}</span>}
+              <span>CHAT</span>
+              <Icono nombre="sobre" />
+            </button>
+            <ChatPartida matchId={matchId} equipoId={miEquipo.id} userId={userId}
+                         abierto={chatAbierto} onNoLeidos={setChatNoLeidos} />
+          </>
+        )}
 
         {equipos.slice(0, 2).map((eq, ei) => (
           <section key={eq.id} className={`rt-equipo ${ei === 0 ? 'izq' : 'der'}`}>
@@ -172,7 +177,7 @@ function Arena({ matchId, equipos, roles }) {
               const rol = roles[id];
               return (
                 <div key={id} className="rt-equipo__fila">
-                  <span className="rt-equipo__avatar"><Icono nombre={rol === 'VERDUGO' ? 'calavera' : 'persona'} /></span>
+                  <span className="rt-equipo__avatar"><Personaje {...colorDe(id)} /></span>
                   <span className="rt-equipo__datos">
                     <span className="rt-equipo__nombre">{nombreDe(id)}</span>
                     <small className="ok">{rol === 'VERDUGO' ? 'RESTA AL RIVAL' : rol === 'HEROE' ? 'SUMA A SU EQUIPO' : 'SIN ROL'}</small>
@@ -184,7 +189,6 @@ function Arena({ matchId, equipos, roles }) {
           </section>
         ))}
 
-        {aviso && <p className="rt-aviso">{aviso}</p>}
       </div>
 
       {/* ---------- SIN RETO ---------- */}
@@ -208,13 +212,13 @@ function Arena({ matchId, equipos, roles }) {
       {/* ---------- RESULTADO ---------- */}
       {terminado && (
         <div className="rt-modal-fondo">
-          <div className={`rt-resultado ${reto.equipoGanadorId === miEquipo?.id ? 'heroe' : reto.equipoGanadorId ? 'verdugo' : ''}`}>
+          <div className={`rt-resultado rt-resultado--final ${ganoMiEquipo ? 'heroe' : reto.equipoGanadorId ? 'verdugo' : ''}`}>
             <p className="rt-resultado__led">FIN DEL RETO</p>
             <p className="rt-resultado__titulo">
-              {!reto.equipoGanadorId ? '¡EMPATE!' : `¡GANA EL EQUIPO ${numeroDe(reto.equipoGanadorId)}!`}
+              {!reto.equipoGanadorId ? '¡EMPATE!' : ganoMiEquipo ? '¡GANARON EL DUELO!' : miEquipo ? 'NO GANARON EL DUELO' : `¡GANA EL EQUIPO ${numeroDe(reto.equipoGanadorId)}!`}
             </p>
             {miEquipo && reto.equipoGanadorId && (
-              <p className="rt-resultado__sub">{reto.equipoGanadorId === miEquipo.id ? 'TU EQUIPO GANÓ EL RETO' : 'TU EQUIPO PERDIÓ EL RETO'}</p>
+              <p className="rt-resultado__sub">EQUIPO {numeroDe(reto.equipoGanadorId)} GANADOR</p>
             )}
             <div className="rt-resultado__marcador">
               {equipos.slice(0, 2).map((e, i) => (
@@ -225,7 +229,7 @@ function Arena({ matchId, equipos, roles }) {
             </div>
             {miRol && <p className="rt-resultado__sub">HICISTE {misClics} CLICS COMO {miRol === 'HEROE' ? 'HÉROE' : 'VERDUGO'}</p>}
             <p className="rt-resultado__nota">EL EQUIPO GANADOR SUMA 1 PUNTO EN LA PARTIDA, COMO UN ACERTIJO.</p>
-            <button className="rt-btn rt-btn-verde" onClick={volver}>VOLVER A LA PARTIDA ({Math.max(vuelta, 0)})</button>
+            <p className="rt-resultado__cuenta">VOLVIENDO A LA PARTIDA EN {Math.max(vuelta, 0)}</p>
           </div>
         </div>
       )}
@@ -248,7 +252,7 @@ function BotonDuelo({ reto, miRol, miEquipo, rival, misClics, onPresionar }) {
 
   useEffect(() => {
     function onKey(e) {
-      if (e.repeat) return;
+      if (e.repeat || e.target.tagName === 'INPUT') return; // escribir en el chat no es presionar
       if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); presionar(); }
     }
     window.addEventListener('keydown', onKey);

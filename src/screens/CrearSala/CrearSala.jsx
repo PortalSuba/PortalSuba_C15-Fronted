@@ -2,26 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icono from '../Home/Iconos';
 import { useTopic } from '../../hooks/useSocket';
-import { listarSalas, crearSala, configurarSala, unirseASala } from '../../services/salasApi';
+import { listarSalas, crearSala, unirseASala } from '../../services/salasApi';
 import { Sesion } from '../../services/sesion';
+import { authApi } from '../../services/authApi';
+import ConfirmarCerrarSesion from '../../components/ConfirmarCerrarSesion';
 import './CrearSala.css';
 import { topics } from '../../config';
 
 const FONDO = '/assets/fondos/Fondo_Lobby.jpeg';
 
-const TEMATICAS = [
-  { id: 'mazmorra', nombre: 'MAZMORRA', imagen: '/assets/salas/sala_1.png', dificultad: 3 },
-  { id: 'biblioteca', nombre: 'BIBLIOTECA', imagen: '/assets/salas/sala_2.png', dificultad: 2 },
-  { id: 'laboratorio', nombre: 'LABORATORIO', imagen: '/assets/salas/sala_3.png', dificultad: 4 },
-  { id: 'sotano', nombre: 'SÓTANO OSCURO', imagen: '/assets/salas/sala_4.png', dificultad: 5 },
-];
-// La partida dura lo que fija el back (c15.partida.duracion = 5 min); los demás tiempos aún no están disponibles
+const TEMA = { id: 'biblioteca', nombre: 'BIBLIOTECA', imagen: '/assets/fondos/Fondo_mapa.jpeg', dificultad: 2 };
+// Lo que el back acepta para la duración de la partida (Sala.DURACIONES_MINUTOS)
 const TIEMPO_PARTIDA = 5;
-const TIEMPOS = [TIEMPO_PARTIDA, 15, 30, 45];
+const TIEMPOS = [TIEMPO_PARTIDA, 10, 15];
 const NIVELES = ['', 'MUY FÁCIL', 'FÁCIL', 'MEDIA', 'DIFÍCIL', 'EXTREMA'];
 const MAX_NOMBRE = 24;
+// Por estabilidad las salas son de 2 equipos de 2 (el back no acepta otra configuración)
 const MIN_JUGADORES = 2;
-const MAX_JUGADORES = 4;
+const MAX_JUGADORES = 2;
 const NUM_EQUIPOS = 2;
 
 export default function CrearSala() {
@@ -29,10 +27,9 @@ export default function CrearSala() {
   const userId = Sesion.userId;
 
   const [nombre, setNombre] = useState('');
-  const [tematica, setTematica] = useState(0);
   const [tiempo, setTiempo] = useState(TIEMPO_PARTIDA);
   const [jugadores, setJugadores] = useState(2);
-  const [dificultad, setDificultad] = useState(TEMATICAS[0].dificultad);
+  const [dificultad, setDificultad] = useState(TEMA.dificultad);
   const [visibilidad, setVisibilidad] = useState('publica');
   const [salas, setSalas] = useState([]);
   const [error, setError] = useState('');
@@ -47,18 +44,11 @@ export default function CrearSala() {
   }, []);
     useTopic(topics.salas(), setSalas);
 
-  const tema = TEMATICAS[tematica];
   const nombreLimpio = nombre.trim();
   const repetido = useMemo(
     () => salas.some((s) => s.nombre.trim().toLowerCase() === nombreLimpio.toLowerCase()),
     [salas, nombreLimpio]
   );
-
-  function cambiarTematica(paso) {
-    const i = (tematica + paso + TEMATICAS.length) % TEMATICAS.length;
-    setTematica(i);
-    setDificultad(TEMATICAS[i].dificultad);
-  }
 
   async function crear() {
     if (!nombreLimpio) return setError('PONLE UN NOMBRE A LA SALA');
@@ -67,14 +57,13 @@ export default function CrearSala() {
     setError('');
     setCreando(true);
     try{
-      const sala = await crearSala(nombreLimpio, userId);
-      if (jugadores !== 4) await configurarSala(sala.id, userId, NUM_EQUIPOS, jugadores);
-      await unirseASala(sala.id, userId);
+      const sala = await crearSala({ nombre: nombreLimpio, minutos: tiempo });
+      await unirseASala(sala.id);
 
       Sesion.guardar('salaId', sala.id);
       Sesion.guardar('configSala', {
         salaId: sala.id,
-        tematica: tema.id,
+        tematica: TEMA.id,
         minutos: tiempo,
         dificultad,
         visibilidad,
@@ -87,8 +76,7 @@ export default function CrearSala() {
   }
 
   function cerrarSesion() {
-    Sesion.limpiar();
-    navegar('/');
+    authApi.logout();
   }
 
   if (!userId) return null;
@@ -100,9 +88,9 @@ export default function CrearSala() {
         <button className="cs-esquina cs-bl cs-con-texto" onClick={() => navegar('/home')}>
           <Icono nombre="izquierda" /> VOLVER
         </button>
-        <button className="cs-esquina cs-br cs-con-texto cs-rojo" onClick={cerrarSesion}>
+        <ConfirmarCerrarSesion className="cs-esquina cs-br cs-con-texto cs-rojo" onConfirmar={cerrarSesion}>
           <Icono nombre="salir" /> CERRAR SESIÓN
-        </button>
+        </ConfirmarCerrarSesion>
 
         <h1 className="cs-titulo">CREAR SALA</h1>
 
@@ -131,36 +119,16 @@ export default function CrearSala() {
               </p>
 
               <p className="cs-label">TEMÁTICA</p>
-              <div className="cs-carrusel">
-                <button className="cs-flecha" onClick={() => cambiarTematica(-1)} aria-label="Temática anterior">
-                  <Icono nombre="izquierda" />
-                </button>
-
-                <div className="cs-mapa">
-                  <div className="cs-mapa__marco">
-                    {/* key fuerza la animación al cambiar */}
-                    <img key={tema.id} src={tema.imagen} alt={tema.nombre}
-                         onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
-                  </div>
-                  <p className="cs-mapa__nombre">{tema.nombre}</p>
-                  <div className="cs-mapa__puntos">
-                    TEMÁTICA {tematica + 1} DE {TEMATICAS.length}
-                    {TEMATICAS.map((t, i) => (
-                      <button key={t.id} className={i === tematica ? 'activo' : ''}
-                              onClick={() => { setTematica(i); setDificultad(t.dificultad); }}
-                              aria-label={t.nombre} />
-                    ))}
-                  </div>
+              <div className="cs-mapa">
+                <div className="cs-mapa__marco">
+                  <img src={TEMA.imagen} alt="Vista del mapa de la Biblioteca" />
                 </div>
-
-                <button className="cs-flecha" onClick={() => cambiarTematica(1)} aria-label="Temática siguiente">
-                  <Icono nombre="derecha" />
-                </button>
+                <p className="cs-mapa__nombre">{TEMA.nombre}</p>
               </div>
 
               <p className="cs-label cs-sugerida">
-                DIFICULTAD SUGERIDA: {tema.dificultad}/5
-                <Calaveras valor={tema.dificultad} />
+                DIFICULTAD SUGERIDA: {TEMA.dificultad}/5
+                <Calaveras valor={TEMA.dificultad} />
               </p>
             </section>
 
@@ -182,8 +150,7 @@ export default function CrearSala() {
               <p className="cs-label">TIEMPO DE LA PARTIDA</p>
               <div className="cs-opciones cs-cuatro">
                 {TIEMPOS.map((m) => (
-                  <button key={m} className={`cs-opcion ${tiempo === m ? 'activa' : ''}`} onClick={() => setTiempo(m)}
-                          disabled={m !== TIEMPO_PARTIDA} title={m !== TIEMPO_PARTIDA ? 'PRÓXIMAMENTE' : undefined}>
+                  <button key={m} className={`cs-opcion ${tiempo === m ? 'activa' : ''}`} onClick={() => setTiempo(m)}>
                     {m} MIN
                   </button>
                 ))}
@@ -232,7 +199,7 @@ export default function CrearSala() {
             <section className="cs-resumen">
               <p className="cs-resumen__tag">RESUMEN</p>
               <p className="cs-resumen__linea">
-                {tema.nombre} · {tiempo} MIN · {jugadores} VS {jugadores}
+                {TEMA.nombre} · {tiempo} MIN · {jugadores} VS {jugadores}
               </p>
               <p className="cs-resumen__detalle">
                 TOTAL: {jugadores * NUM_EQUIPOS} JUGADORES · DIFICULTAD {dificultad}/5 · {visibilidad === 'publica' ? 'PÚBLICA' : 'PRIVADA'}

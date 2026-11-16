@@ -6,11 +6,17 @@ export const config = {
   useMocks: import.meta.env.VITE_USE_MOCKS === 'true',
 };
 
+// Proveedor de identidad: no son secretos, van en el código del navegador en cualquier caso
+export const auth0Config = {
+  domain: import.meta.env.VITE_AUTH0_DOMAIN || 'escaperoomc15.us.auth0.com',
+  clientId: import.meta.env.VITE_AUTH0_CLIENT_ID || '1wAeS9u3tHLXqnn6L3MJvvU788R9HOIc',
+  audience: import.meta.env.VITE_AUTH0_AUDIENCE || 'https://api.escaperoomc15',
+};
+
 export const topics = {
   salas: () => '/topic/salas',                                   // catálogo
   sala: (salaId) => `/topic/salas/${salaId}`,                     // detalle: equipos y listos
   inicio: (salaId) => `/topic/salas/${salaId}/inicio`,            // cuenta regresiva y arranque
-  chat: (salaId) => `/topic/salas/${salaId}/chat`,                // chat de la sala de espera
   timer: (m) => `/topic/partidas/${m}/cronometro`,
   reto: (m) => `/topic/partidas/${m}/reto`,
   resultado: (m) => `/topic/partidas/${m}/resultado`,
@@ -18,10 +24,15 @@ export const topics = {
   posiciones: (m, e) => `/topic/partidas/${m}/equipos/${e}/posiciones`,
   inventario: (m, e) => `/topic/partidas/${m}/equipos/${e}/inventario`,
   roles: (m, e) => `/topic/partidas/${m}/equipos/${e}/roles`,
+  chatGlobal: () => '/topic/chat/global',
+  chatSala: (salaId) => `/topic/chat/salas/${salaId}`,
+  chatPartida: (m) => `/topic/chat/partidas/${m}`,
+  chatEquipo: (m, e) => `/topic/chat/partidas/${m}/equipos/${e}`,
+  ranking: () => '/topic/estadisticas/ranking',                  // aviso: terminó una partida
 };
 
 export const destinos = {
-  registrarSesion: (m, u) => `/app/partidas/${m}/jugadores/${u}/sesion`,
+  registrarSesion: (m) => `/app/partidas/${m}/sesion`,
   // lobby: si se cierra la página el back saca al jugador (y si es el anfitrión, cierra la sala)
-  registrarSesionSala: (salaId, u) => `/app/salas/${salaId}/jugadores/${u}/sesion`,
+  registrarSesionSala: (salaId) => `/app/salas/${salaId}/sesion`,
 };

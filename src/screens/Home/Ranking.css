@@ -1,0 +1,48 @@
+.rk {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  align-items: start;
+  gap: calc(var(--u) * 1.3);
+}
+.rk-rotulo { margin: 0 0 calc(var(--u) * 0.8) !important; font-size: clamp(1.05rem, 1.7vw, 1.35rem); color: #f0b54a; }
+.rk-vacio { margin: calc(var(--u) * 1) 0 !important; font-size: clamp(0.875rem, 1.3vw, 1.05rem); color: #d4c2a5; }
+.rk-nota { margin-top: calc(var(--u) * 1) !important; font-size: clamp(0.875rem, 1.3vw, 1.05rem); color: #d4c2a5; }
+
+.rk-tabla table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: clamp(0.875rem, 1.3vw, 1.05rem); }
+.rk-tabla th { padding: 0.4rem 0.12rem; overflow-wrap: anywhere; font-weight: normal; color: #ffd384; border-bottom: calc(var(--u) * 0.15) solid #6b5233; }
+.rk-tabla td { padding: 0.4rem 0.12rem; overflow-wrap: anywhere; text-align: center; border-bottom: calc(var(--u) * 0.1) solid #3a332c; }
+.rk-tabla .rk-nombre { width: 43%; text-align: left; overflow-wrap: anywhere; }
+.rk-puntos { color: #f6d98a; }
+.rk-pos-1 td:first-child { color: #ffd76a; }
+.rk-pos-2 td:first-child { color: #d9d9d9; }
+.rk-pos-3 td:first-child { color: #d08a4e; }
+.rk-yo td { background: #f0b54a22; }
+
+.rk-cifras { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--u) * 0.7); margin-bottom: calc(var(--u) * 1.4); }
+.rk-cifra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 0.9) calc(var(--u) * 0.4);
+  background: #1e1b18;
+  border: calc(var(--u) * 0.15) solid #4b433b;
+}
+.rk-cifra strong { font-family: 'Press Start 2P', monospace; font-size: max(15px, calc(var(--u) * 1.7)); font-weight: normal; color: #f6d98a; }
+.rk-cifra small { font-size: clamp(0.875rem, 1.3vw, 1.05rem); color: #d4c2a5; }
+
+.rk-ultimas { display: flex; flex-direction: column; gap: calc(var(--u) * 0.5); margin: 0; padding: 0; list-style: none; }
+.rk-ultimas li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.2) calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.7);
+  font-size: clamp(0.875rem, 1.3vw, 1.05rem);
+  background: #1e1b18;
+}
+.rk-ultimas time { color: #d4c2a5; }
+.rk-resultado--victoria { color: #7fd85f; }
+.rk-resultado--empate { color: #f0b54a; }
+.rk-resultado--derrota { color: #ff7a6b; }
+

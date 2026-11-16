@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Icono from '../Home/Iconos';
+import { Personaje, colorDe } from './MapaIso';
 
 const SEGMENTOS = 10;
 
-export default function ModalDesafio({ miEquipo, rival, miRol, segundos = 3, onFin }) {
+export default function ModalDesafio({ miEquipo, rival, miRol, nombreDe, segundos = 3, onFin }) {
   const [restante, setRestante] = useState(segundos);
   const finRef = useRef(onFin);
   finRef.current = onFin;
@@ -43,22 +44,36 @@ export default function ModalDesafio({ miEquipo, rival, miRol, segundos = 3, onF
           <div className="pm-desafio__tarjeta heroe yo">
             <header><Icono nombre="persona" /> TU EQUIPO</header>
             <div className="pm-desafio__persona">
-              <span className="pm-desafio__avatar"><Icono nombre={miRol === 'VERDUGO' ? 'calavera' : 'persona'} /></span>
               <span>
                 <strong>EQUIPO {miEquipo?.numero ?? '?'}</strong>
                 <small>ERES {miRol === 'VERDUGO' ? 'VERDUGO' : miRol === 'HEROE' ? 'HÉROE' : 'ESPECTADOR'}</small>
               </span>
+            </div>
+            <div className="pm-desafio__jugadores">
+              {(miEquipo?.miembros ?? []).map((id) => (
+                <span key={id} className="pm-desafio__jugador">
+                  <Personaje {...colorDe(id)} />
+                  <small>{nombreDe(id)}</small>
+                </span>
+              ))}
             </div>
           </div>
           <span className="pm-desafio__vs">VS</span>
           <div className="pm-desafio__tarjeta verdugo">
             <header><Icono nombre="calavera" /> RIVAL</header>
             <div className="pm-desafio__persona">
-              <span className="pm-desafio__avatar"><Icono nombre="persona" /></span>
               <span>
                 <strong>EQUIPO {rival?.numero ?? '?'}</strong>
                 <small>{rival?.miembros?.length ?? 0} JUGADORES</small>
               </span>
+            </div>
+            <div className="pm-desafio__jugadores">
+              {(rival?.miembros ?? []).map((id) => (
+                <span key={id} className="pm-desafio__jugador">
+                  <Personaje {...colorDe(id)} />
+                  <small>{nombreDe(id)}</small>
+                </span>
+              ))}
             </div>
           </div>
         </div>

@@ -1,0 +1,44 @@
+/* Mismo ancho para el panel, el chat y sus pestañas; en celular la unidad queda muy pequeña */
+.pm-root, .rt-root { --panel-ancho: max(calc(var(--u) * 27), min(320px, 80cqw)); }
+
+.cp {
+  position: absolute;
+  top: max(calc(var(--u) * 7), 56px);
+  bottom: max(calc(var(--u) * 7), 56px);
+  right: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: var(--panel-ancho);
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--u) * 0.8);
+  background: rgba(22, 18, 15, 0.95);
+  border: calc(var(--u) * 0.25) solid #b8862e;
+  border-right: 0;
+}
+.cp--cerrado { display: none; }
+
+.cp-tabs { display: flex; gap: calc(var(--u) * 0.3); }
+.cp-tabs button {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.9);
+  font-family: 'Silkscreen', monospace;
+  color: #a69a86;
+  background: #2a2420;
+  border: calc(var(--u) * 0.15) solid #4b433b;
+  border-bottom: 0;
+  cursor: pointer;
+}
+.cp-tabs button.activa { color: #f1dfb8; background: #6b5233; }
+.cp-badge { padding: 0 calc(var(--u) * 0.35); color: #fff; background: #c0392b; }
+
+.cp-canal { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.cp-canal--oculto { display: none; }
+.cp-canal .ch { flex: 1; }
+.cp-canal .ch-lista { flex: 1 1 0; max-height: none; }
+
+/* En el reto el velo del duelo tiene z-index 40: el chat va encima para poder usarlo */
+.rt-root .cp, .rt-root .rt-tab-chat { z-index: 50; }
+.rt-tab-chat.abierto { right: var(--panel-ancho); }

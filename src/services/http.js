@@ -1,9 +1,16 @@
 import { config } from '../config';
+import { obtenerToken } from './auth';
+import { Sesion } from './sesion';
+
+export const EVENTO_ERROR_SERVIDOR = 'c15:error-servidor';
+const CARACTERES_CODIGO = 8; // suficientes para buscar en los logs: trace_id=~"abcd1234.*"
 
 export class ApiError extends Error {
-  constructor(status, mensaje) {
-    super(mensaje);
+  constructor(status, mensaje, traceId = null) {
+    // En un fallo del servidor el jugador ve un código para reportarlo
+    super(status >= 500 && traceId ? `${mensaje} (código ${traceId.slice(0, CARACTERES_CODIGO)})` : mensaje);
     this.status = status;
+    this.traceId = traceId;
   }
   get esConflicto() { return this.status === 409; }
   get esProhibido() { return this.status === 403; }
@@ -13,19 +20,35 @@ export class ApiError extends Error {
 
 async function request(method, path, { body, query } = {}) {
   const qs = query ? '?' + new URLSearchParams(query).toString() : '';
+  const token = await obtenerToken();
+  const headers = {
+    ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   let res;
   try {
     res = await fetch(`${config.apiUrl}${path}${qs}`, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'No se pudo conectar con el servidor');
   }
+  if (res.status === 401 && Sesion.userId) {
+    // La sesión ya no sirve: de vuelta al inicio a entrar de nuevo
+    Sesion.limpiar();
+    window.location.assign('/');
+  }
   if (res.status === 204) return null;
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, data?.error || `Error ${res.status}`);
+  if (!res.ok) {
+    const traceId = res.headers.get('X-Trace-Id');
+    console.warn(`[API] ${method} ${path} -> ${res.status} (traceId ${traceId ?? 'desconocido'})`);
+    const error = new ApiError(res.status, res.status >= 500 ? 'Algo falló' : data?.error || `Error ${res.status}`, traceId);
+    if (res.status >= 500) window.dispatchEvent(new CustomEvent(EVENTO_ERROR_SERVIDOR, { detail: error }));
+    throw error;
+  }
   return data;
 }
 

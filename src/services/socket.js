@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import { config } from '../config';
+import { obtenerToken } from './auth';
 
 
 const subs = new Map();
@@ -13,6 +14,10 @@ const client = new Client({
   reconnectDelay: 2000,
   heartbeatIncoming: 10000,
   heartbeatOutgoing: 10000,
+  beforeConnect: async () => {
+    const token = await obtenerToken();
+    client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  },
   onConnect: () => {
     setEstado(true);
     subs.forEach((s) => (s.stompSub = suscribirReal(s.destino, s.cb)));

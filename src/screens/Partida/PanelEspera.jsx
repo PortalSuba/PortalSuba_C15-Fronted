@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { detalleSala, marcarListo, desmarcarListo, unirseAEquipo, registrarSesionSala, salirDeSala } from '../../services/salasApi';
 import { Sesion } from '../../services/sesion';
 import { topics } from '../../config';
-import { useSubscription } from '../../hooks/useSocket';
+import { useConexion, useSubscription } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
 import { codigoDe } from '../Home/SalaCard';
-import ChatEspera from './ChatEspera';
+import Chat from '../../components/Chat';
+import { canales } from '../../services/chatApi';
 import './PanelEspera.css';
 
 const MIN_EQUIPOS = 2;
@@ -20,33 +21,64 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
   const [aviso, setAviso] = useState(null);
   const [copiado, setCopiado] = useState(false);
   const iniciadaRef = useRef(false);
+  const cerradaRef = useRef(false);
+  const canalSala = useMemo(() => canales.sala(salaId), [salaId]);
 
   const config = (() => { try { return Sesion.obtener('configSala'); } catch { return null; } })();
   const esPrivada = config && (config.privada === true || String(config.visibilidad ?? '').toUpperCase() === 'PRIVADA');
 
+  // Los callbacks del padre cambian en cada render: si fueran dependencias, cada respuesta volvería a
+  // disparar los efectos que piden la sala, y el lobby se llamaría a sí mismo sin parar.
+  const padreRef = useRef({ onIniciada, onVolver, onDetalle });
+  useEffect(() => { padreRef.current = { onIniciada, onVolver, onDetalle }; });
+
   const aplicarDetalle = useCallback((d) => {
     if (!d) return;
     setDetalle(d);
-    onDetalle?.(d);
+    // El resumen la necesita y para entonces la sala ya no existe
+    if (d.minutos) Sesion.guardar('minutosPartida', d.minutos);
+    padreRef.current.onDetalle?.(d);
     if (d.estado === 'EN_PARTIDA' && !iniciadaRef.current) {
       iniciadaRef.current = true;
-      onIniciada?.(salaId);
+      padreRef.current.onIniciada?.(salaId);
     }
-  }, [onDetalle, onIniciada, salaId]);
+  }, [salaId]);
 
   // Carga inicial
   useEffect(() => {
     let vivo = true;
     detalleSala(salaId)
       .then((d) => { if (vivo) aplicarDetalle(d); })
-      .catch(() => { if (vivo) setAviso('NO SE PUDO CARGAR LA SALA'); });
+      .catch(() => { if (vivo && !cerradaRef.current) setAviso('NO SE PUDO CARGAR LA SALA'); });
     return () => { vivo = false; };
   }, [salaId, aplicarDetalle]);
 
-  // Si cierra la página, el back lo saca de la sala (y si es el anfitrión, la cierra)
+  // Si cierra la página y no vuelve en unos segundos, el back lo saca de la sala (y si es el anfitrión,
+  // la cierra). Cada conexión es una sesión nueva: hay que registrarla también al reconectar.
+  const conectado = useConexion();
   useEffect(() => {
-    if (salaId && userId) registrarSesionSala(salaId, userId);
-  }, [salaId, userId]);
+    if (conectado && salaId) registrarSesionSala(salaId);
+  }, [conectado, salaId]);
+
+  // Si tardó más que ese tiempo en volver, el back ya no pudo avisarle: al reconectar hay que
+  // preguntar, si no queda en un lobby que ya no sirve.
+  const yaConecto = useRef(false);
+  useEffect(() => {
+    if (!conectado) return;
+    if (!yaConecto.current) { yaConecto.current = true; return; }
+    const salirConAviso = (texto) => {
+      cerradaRef.current = true;
+      setCuenta(null);
+      setAviso(texto);
+      setTimeout(() => padreRef.current.onVolver?.(), 2500);
+    };
+    detalleSala(salaId)
+      .then((d) => {
+        if (d?.jugadores?.includes(userId)) aplicarDetalle(d);
+        else salirConAviso('SE CAYÓ TU CONEXIÓN Y SALISTE DE LA SALA');
+      })
+      .catch((e) => { if (e?.esNoEncontrado) salirConAviso('SE CAYÓ LA CONEXIÓN Y LA SALA SE CERRÓ'); });
+  }, [conectado, salaId, userId, aplicarDetalle]);
 
   // Cambios de la sala en vivo (entradas, equipos, listos)
   useSubscription(topics.sala(salaId), aplicarDetalle);
@@ -56,6 +88,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (m?.estado === 'CUENTA_REGRESIVA') setCuenta(m.segundos ?? 5);
     else if (m?.estado === 'CANCELADA') setCuenta(null);
     else if (m?.estado === 'CERRADA') {
+      cerradaRef.current = true; // la sala ya no existe: que un 404 de la carga no pise este aviso
       setCuenta(null);
       setAviso('EL ANFITRIÓN SALIÓ Y CERRÓ LA SALA');
       setTimeout(() => onVolver?.(), 2500);
@@ -108,7 +141,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (!miEquipo || ocupado) return;
     setOcupado(true); setAviso(null);
     try {
-      const d = yoListo ? await desmarcarListo(salaId, userId) : await marcarListo(salaId, userId);
+      const d = yoListo ? await desmarcarListo(salaId) : await marcarListo(salaId);
       if (d?.equipos) aplicarDetalle(d);
     } catch (e) {
       setAviso(e?.esConflicto ? 'LA PARTIDA YA INICIÓ' : 'NO SE PUDO CAMBIAR TU ESTADO');
@@ -119,7 +152,7 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
     if (ocupado) return;
     setOcupado(true); setAviso(null);
     try {
-      await unirseAEquipo(equipo.id, userId);
+      await unirseAEquipo(equipo.id);
       Sesion.guardar('equipoId', equipo.id);
       const d = await detalleSala(salaId);
       aplicarDetalle(d);
@@ -177,50 +210,56 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
           </p>
         )}
 
-        <div className="pe-contador">
-          LISTOS <b>{totalListos}</b> DE <b>{totalJugadores}</b>
-        </div>
+        <div className="pe-cuerpo">
+          <div className="pe-columna">
+            <div className="pe-contador">
+              LISTOS <b>{totalListos}</b> DE <b>{totalJugadores}</b>
+            </div>
 
-        {/* Equipos */}
-        <div className="pe-equipos">
-          {equipos.map((e) => {
-            const mio = e.id === miEquipo?.id;
-            const lleno = (e.miembros?.length ?? 0) >= e.cupoMaximo;
-            return (
-              <div key={e.id} className={`pe-equipo ${mio ? 'pe-equipo--mio' : ''} ${e.listo ? 'pe-equipo--listo' : ''}`}>
-                <div className="pe-equipo__cab">
-                  <span>EQUIPO {e.numero}{mio ? ' (TÚ)' : ''}</span>
-                  <span className="pe-equipo__cupo">{e.miembros?.length ?? 0}/{e.cupoMaximo}</span>
-                </div>
-                <ul className="pe-equipo__lista">
-                  {(e.miembros ?? []).map((m) => {
-                    const listo = (e.listos ?? []).includes(m);
-                    return (
-                      <li key={m} className={`pe-jugador ${listo ? 'pe-jugador--listo' : ''}`}>
-                        <span className="pe-jugador__nombre">{nombreDe(m)}</span>
-                        <span className="pe-jugador__estado">{listo ? '✓ LISTO' : 'NO LISTO'}</span>
-                      </li>
-                    );
-                  })}
-                  {(e.miembros?.length ?? 0) === 0 && <li className="pe-jugador pe-jugador--vacio">SIN JUGADORES</li>}
-                </ul>
-                {!mio && !lleno && !enCuenta && (
-                  <button className="pe-cambiar" disabled={ocupado} onClick={() => cambiarEquipo(e)}>
-                    CAMBIARME A ESTE EQUIPO
-                  </button>
-                )}
+            {/* Equipos */}
+            <div className="pe-equipos">
+              {equipos.map((e) => {
+                const mio = e.id === miEquipo?.id;
+                const lleno = (e.miembros?.length ?? 0) >= e.cupoMaximo;
+                return (
+                  <div key={e.id} className={`pe-equipo ${mio ? 'pe-equipo--mio' : ''} ${e.listo ? 'pe-equipo--listo' : ''}`}>
+                    <div className="pe-equipo__cab">
+                      <span>EQUIPO {e.numero}{mio ? ' (TÚ)' : ''}</span>
+                      <span className="pe-equipo__cupo">{e.miembros?.length ?? 0}/{e.cupoMaximo}</span>
+                    </div>
+                    <ul className="pe-equipo__lista">
+                      {(e.miembros ?? []).map((m) => {
+                        const listo = (e.listos ?? []).includes(m);
+                        return (
+                          <li key={m} className={`pe-jugador ${listo ? 'pe-jugador--listo' : ''}`}>
+                            <span className="pe-jugador__nombre">{nombreDe(m)}</span>
+                            <span className="pe-jugador__estado">{listo ? '✓ LISTO' : 'NO LISTO'}</span>
+                          </li>
+                        );
+                      })}
+                      {(e.miembros?.length ?? 0) === 0 && <li className="pe-jugador pe-jugador--vacio">SIN JUGADORES</li>}
+                    </ul>
+                    {!mio && !lleno && !enCuenta && (
+                      <button className="pe-cambiar" disabled={ocupado} onClick={() => cambiarEquipo(e)}>
+                        CAMBIARME A ESTE EQUIPO
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Diagnóstico */}
+            {!enCuenta && motivos.length > 0 && (
+              <div className="pe-motivos">
+                <span className="pe-motivos__titulo">¿POR QUÉ NO ARRANCA?</span>
+                <ul>{motivos.map((m) => <li key={m}>{m}</li>)}</ul>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Diagnóstico */}
-        {!enCuenta && motivos.length > 0 && (
-          <div className="pe-motivos">
-            <span className="pe-motivos__titulo">¿POR QUÉ NO ARRANCA?</span>
-            <ul>{motivos.map((m) => <li key={m}>{m}</li>)}</ul>
+            )}
           </div>
-        )}
+
+          <Chat canal={canalSala} userId={userId} titulo="CHAT DE LA SALA" />
+        </div>
 
         {aviso && <p className="pe-aviso">{aviso}</p>}
 
@@ -235,8 +274,6 @@ export default function PanelEspera({ salaId, onIniciada, onVolver, onDetalle })
           </button>
         </div>
       </section>
-
-      <ChatEspera salaId={salaId} userId={userId} />
     </div>
   );
 }

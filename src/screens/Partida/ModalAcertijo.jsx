@@ -3,7 +3,7 @@ import Icono from '../Home/Iconos';
 import { gameplayApi } from '../../services/gameplayApi';
 import { numeroDe } from './MapaIso';
 
-export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuelto }) {
+export default function ModalAcertijo({ dto, matchId, onCerrar, onResuelto }) {
   const [valores, setValores] = useState({});
   const [resultado, setResultado] = useState(dto.resuelto ? { correcto: true, mensaje: 'TU EQUIPO YA RESOLVIÓ ESTE ACERTIJO' } : null);
   const [enviando, setEnviando] = useState(false);
@@ -19,11 +19,12 @@ export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuel
   }
 
   async function enviar() {
+    if (enviando || resuelto) return;
     const r = respuesta();
     if (!r.length) return setResultado({ correcto: false, mensaje: 'ESCRIBE UNA RESPUESTA' });
     setEnviando(true);
     try {
-      const res = await gameplayApi.enviarSolucion(matchId, dto.componenteMapaId, userId, r);
+      const res = await gameplayApi.enviarSolucion(matchId, dto.componenteMapaId, r);
       setResultado({ correcto: res.correcto, mensaje: res.mensaje.toUpperCase() });
       if (res.correcto) onResuelto(dto.componenteMapaId);
       else { setSacudir(true); setTimeout(() => setSacudir(false), 400); }
@@ -62,7 +63,7 @@ export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuel
         ))}
 
         {resultado && (
-          <p className={`pm-acertijo__resultado ${resultado.correcto ? 'ok' : 'mal'}`}>{resultado.mensaje}</p>
+          <p role="status" className={`pm-acertijo__resultado ${resultado.correcto ? 'ok' : 'mal'}`}>{resultado.mensaje}</p>
         )}
 
         <div className="pm-acertijo__botones">
@@ -73,7 +74,7 @@ export default function ModalAcertijo({ dto, matchId, userId, onCerrar, onResuel
             </button>
           )}
         </div>
-        <p className="pm-acertijo__nota">MIENTRAS LO TENGAS ABIERTO, TUS COMPAÑEROS NO PUEDEN ABRIRLO NI PUEDES MOVERTE.</p>
+        {!resuelto && <p className="pm-acertijo__nota">MIENTRAS LO TENGAS ABIERTO, TUS COMPAÑEROS NO PUEDEN ABRIRLO NI PUEDES MOVERTE.</p>}
       </div>
     </div>
   );

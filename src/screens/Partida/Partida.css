@@ -40,12 +40,20 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: max(100cqw, calc(100cqh * var(--pm-aspecto)));
+  width: min(100cqw, calc(100cqh * var(--pm-aspecto)));
   aspect-ratio: var(--pm-aspecto);
   transform: translate(-50%, -50%);
-  background: #15110e center / 100% 100% no-repeat;
   image-rendering: pixelated;
   container-type: inline-size;
+}
+
+.pm-mapa::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--pm-fondo) center / 100% 100% no-repeat;
+  clip-path: polygon(0 0, 100% 0, 100% 90%, 94% 90%, 94% 100%, 0 100%);
 }
 
 .pm-celdas { position: absolute; inset: 0; }
@@ -68,23 +76,27 @@
 /*Objetos*/
 .pm-objeto {
   position: absolute;
-  transform: translate(-50%, -80%);
+  transform: translate(-50%, -100%);
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.pm-sprite { width: 2.6cqw; height: 2.6cqw; }
-.pm-sprite-alto { height: 3.3cqw; }
-
-.pm-obj-acertijo .pm-sprite,
-.pm-obj-llave .pm-sprite { animation: pm-flotar 1.6s ease-in-out infinite; }
-.pm-obj-acertijo .pm-sprite { filter: drop-shadow(0 0 0.5cqw #ffd76a) drop-shadow(0 0 1.2cqw rgba(255, 200, 80, 0.6)); }
-.pm-obj-llave .pm-sprite { width: 2cqw; filter: drop-shadow(0 0 0.5cqw #ffd76a); }
-.pm-obj-acertijo.resuelto .pm-sprite { filter: drop-shadow(0 0 0.4cqw #6fd46a); animation: none; }
-.pm-objeto.cercano .pm-sprite { filter: drop-shadow(0 0 0.6cqw #fff) drop-shadow(0 0 1.6cqw #ffd76a); }
-.pm-obj-obstaculo { transform: translate(-50%, -85%); }
-.pm-sprite-pilar { width: 2.2cqw; height: 3.3cqw; opacity: 0.75; }
+.pm-objeto::before {
+  content: '';
+  position: absolute;
+  bottom: -0.25cqw;
+  width: 84%;
+  height: 0.8cqw;
+  border-radius: 50%;
+  background: #160b08a6;
+}
+.pm-sprite { position: relative; width: var(--pm-sprite-ancho); height: auto; }
+.pm-obj-acertijo .pm-sprite, .pm-obj-llave .pm-sprite {
+  filter: drop-shadow(0 0 0.22rem #ffc65eaa);
+}
+.pm-obj-acertijo.resuelto .pm-sprite { filter: drop-shadow(0 0 0.24rem #c7ff9e) drop-shadow(0 0 0.7rem #64ee45); }
+.pm-objeto.cercano .pm-sprite { filter: drop-shadow(0 0 0.3cqw #ffda80); }
 
 .pm-burbuja {
   position: absolute;
@@ -95,7 +107,7 @@
   gap: 0.25cqw;
   padding: 0.5cqw 0.8cqw;
   white-space: nowrap;
-  font-size: 0.75cqw;
+  font-size: clamp(0.8125rem, 1.05cqw, 1.0625rem);
   color: var(--crema);
   background: rgba(20, 16, 13, 0.95);
   border: 0.15cqw solid var(--borde);
@@ -117,7 +129,7 @@
 /*Jugadores*/
 .pm-jugador {
   position: absolute;
-  transform: translate(-50%, -88%);
+  transform: translate(-50%, -97%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -125,6 +137,7 @@
   transition: left 0.15s linear, top 0.15s linear;
 }
 .pm-personaje { position: relative; z-index: 1; width: 2.2cqw; height: 3.1cqw; }
+.pm-jugador .pm-personaje { width: clamp(1.9rem, 3.4cqw, 3.75rem); height: auto; }
 .pm-jugador__sombra {
   width: 2cqw;
   height: 0.6cqw;
@@ -134,9 +147,13 @@
 }
 .pm-jugador__nombre {
   margin-bottom: 0.3cqw;
-  padding: 0.15cqw 0.5cqw;
-  font-size: 0.72cqw;
-  white-space: nowrap;
+  padding: 0.22rem 0.55rem;
+  font-size: clamp(0.75rem, 1.15cqw, 1rem);
+  line-height: 1.2;
+  width: max-content;
+  max-width: min(12rem, 40vw);
+  overflow-wrap: anywhere;
+  text-align: center;
   color: var(--crema);
   background: rgba(15, 12, 10, 0.78);
   border: 0.1cqw solid #3a332c;
@@ -256,7 +273,7 @@
   border-right: 0;
 }
 /* Pegada al borde izquierdo del panel: usa el mismo ancho (el panel es border-box) */
-.pm-tab-panel.abierto { right: calc(var(--u) * 27); }
+.pm-tab-panel.abierto { right: var(--panel-ancho); }
 .pm-tab-panel__txt { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: calc(var(--u) * 0.15); }
 .pm-badge {
   min-width: calc(var(--u) * 1.6);
@@ -272,7 +289,7 @@
   right: 0;
   z-index: 20;
   box-sizing: border-box;
-  width: calc(var(--u) * 27);
+  width: var(--panel-ancho);
   overflow-y: auto;
   padding: calc(var(--u) * 1.4);
   background: rgba(22, 18, 15, 0.95);
@@ -340,6 +357,7 @@
   background: #3b3128;
   border: calc(var(--u) * 0.15) solid #2a2018;
 }
+:is(.pm-equipo__avatar, .pm-feed__avatar) .pm-personaje { width: 85%; height: 90%; }
 .pm-equipo__datos { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pm-equipo__nombre { font-size: calc(var(--u) * 0.88); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pm-equipo__datos small { font-size: calc(var(--u) * 0.68); color: #8a3a2a; }
@@ -639,7 +657,6 @@
 .pm-rol__cuenta { font-size: calc(var(--u) * 0.85); color: var(--crema-tenue); }
 
 /*ANIMACIONES*/
-@keyframes pm-flotar { 50% { transform: translateY(-0.4cqw); } }
 @keyframes pm-parpadeo { 50% { opacity: 0.35; } }
 @keyframes pm-aparecer { from { opacity: 0; transform: translateY(0.5cqw); } }
 @keyframes pm-aparecer-grande { from { opacity: 0; transform: scale(0.85); } }
@@ -656,7 +673,8 @@
 /* DESAFÍO aviso */
 .pm-desafio {
   position: relative;
-  width: calc(var(--u) * 44);
+  width: min(43rem, calc(100vw - 2rem));
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -785,3 +803,74 @@
 }
 .pm-clasificacion p.mio { border-color: var(--dorado); }
 .pm-clasificacion small { color: var(--crema-tenue); }
+.pm-desafio__duelo {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+}
+.pm-desafio__duelo .pm-desafio__vs { align-self: center; }
+.pm-desafio__duelo .pm-desafio__tarjeta { width: auto; max-width: none; }
+.pm-desafio__persona { justify-content: center; text-align: center; }
+.pm-desafio__tarjeta { min-width: 0; }
+.pm-desafio__persona strong, .pm-desafio__tarjeta header { font-size: max(12px, calc(var(--u) * 1.05)); }
+.pm-desafio__leyenda { font-size: max(11px, calc(var(--u) * 1.02)); }
+.pm-desafio__efecto { text-align: center; }
+
+.pm-hud .pm-tab-panel {
+  min-inline-size: 2.75rem;
+  min-block-size: 6.25rem;
+  justify-content: center;
+  color: #fff1d0;
+}
+.pm-hud .pm-tab-panel__txt { font-size: clamp(1rem, 1.5vw, 1.25rem); }
+.pm-tab-chat { top: max(66%, calc(42% + 6.5rem)); }
+
+.pm-modal-fondo > .pm-acertijo {
+  box-sizing: border-box;
+  width: min(43rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  gap: clamp(0.55rem, 1.8vh, 1rem);
+}
+.pm-acertijo__cabeza { flex-wrap: wrap; font-size: clamp(1rem, 1.6vw, 1.3rem); }
+.pm-acertijo__estado { font-size: clamp(0.75rem, 1.15vw, 0.95rem); }
+.pm-modal-fondo .pm-acertijo .pm-acertijo__enunciado {
+  font-size: clamp(1rem, 1.75vw, 1.375rem);
+  line-height: 1.5;
+}
+.pm-modal-fondo .pm-acertijo :is(.pm-acertijo__campo, input, .pm-acertijo__resultado, .pm-btn) {
+  font-size: clamp(0.9375rem, 1.45vw, 1.125rem);
+}
+.pm-modal-fondo .pm-acertijo .pm-acertijo__nota { font-size: clamp(0.8125rem, 1.25vw, 1rem); }
+.pm-acertijo__campo input { min-height: 2.75rem; min-width: 0; }
+.pm-acertijo__resultado.ok {
+  padding: 0.5rem;
+  color: #c5ffa8;
+  background: #193b1b;
+  border: 1px solid #7ae45f;
+}
+.pm-desafio__jugadores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0 0.4rem 0.4rem;
+}
+.pm-desafio__jugador { display: grid; justify-items: center; min-width: 0; max-width: 100%; }
+.pm-desafio__jugador .pm-personaje { width: 1.5rem; height: 1.85rem; }
+.pm-desafio__jugador small {
+  max-width: 100%;
+  color: #352719;
+  font-size: clamp(0.75rem, 1vw, 0.9375rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+@media (max-width: 28rem) {
+  .pm-desafio__duelo { gap: 0.35rem; }
+  .pm-desafio__jugadores { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-height: 26rem) {
+  .pm-hud .pm-tab-panel { min-block-size: 0; padding-block: 0.4rem; }
+  .pm-tab-chat { top: max(66%, calc(42% + 5.5rem)); }
+}

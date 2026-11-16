@@ -55,14 +55,14 @@
 
 /* Desafío Héroe vs Verdugo (popup previo) */
 :root [class*="pm-desafio"] :is(p, li, small):not([class*="titulo"]):not([class*="num"]) {
-  font-size: var(--fs-texto);
+  font-size: calc(var(--fs-texto) + 0.125rem);
 }
 
 /*SALA DE ESPERA*/
 :root .pe-velo { padding: 16px; box-sizing: border-box; }
 
 :root .pe-panel {
-  width: min(calc(var(--u, 10px) * 70), calc(100vw - 32px));
+  width: min(calc(var(--u, 10px) * 92), calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding-bottom: 0;                       /* el espacio inferior lo da la barra de botones */
   gap: max(8px, calc(var(--u, 10px) * 1.1));
@@ -81,26 +81,41 @@
 }
 
 :root .pe-titulo { font-size: max(16px, calc(var(--u, 10px) * 1.9)); }
-:root .pe-codigo__etq { font-size: var(--fs-mini); }
-:root .pe-regla { font-size: var(--fs-texto); }
-:root .pe-cuenta__txt { font-size: var(--fs-mini); }
-:root .pe-contador { font-size: var(--fs-texto); }
-:root .pe-equipo__cab { font-size: var(--fs-texto); }
-:root .pe-jugador { font-size: var(--fs-texto); }
-:root .pe-cambiar { font-size: var(--fs-mini); padding: max(6px, calc(var(--u, 10px) * 0.5)) max(10px, calc(var(--u, 10px) * 1)); }
-:root .pe-motivos { font-size: var(--fs-mini); }
-:root .pe-motivos__titulo { font-size: var(--fs-texto); }
-:root .pe-aviso { font-size: var(--fs-texto); }
-:root .pe-boton { font-size: var(--fs-boton); }
-:root .pe-boton--chico { font-size: var(--fs-mini); }
+:root .pe-codigo__etq { font-size: calc(var(--fs-mini) + 0.125rem); }
+:root .pe-regla { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-cuenta__txt { font-size: calc(var(--fs-mini) + 0.125rem); }
+:root .pe-contador { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-equipo__cab { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-jugador { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-cambiar { font-size: calc(var(--fs-mini) + 0.125rem); padding: max(6px, calc(var(--u, 10px) * 0.5)) max(10px, calc(var(--u, 10px) * 1)); }
+:root .pe-motivos { font-size: calc(var(--fs-mini) + 0.125rem); }
+:root .pe-motivos__titulo { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-aviso { font-size: calc(var(--fs-texto) + 0.125rem); }
+:root .pe-boton { font-size: calc(var(--fs-boton) + 0.125rem); }
+:root .pe-boton--chico { font-size: calc(var(--fs-mini) + 0.125rem); }
+:root .pe-panel :is(.ch-titulo, .ch-texto, .ch-input) {
+  font-size: calc(var(--fs-texto) + 0.125rem);
+}
+:root .pe-panel :is(.ch-cab, .ch-vacio, .ch-error, .ch-contador, .ch-enviar) {
+  font-size: calc(var(--fs-mini) + 0.125rem);
+}
+:root .ch-titulo { font-size: var(--fs-texto); }
+:root .ch-texto,
+:root .ch-input { font-size: var(--fs-texto); }
+:root .ch-cab,
+:root .ch-vacio,
+:root .ch-error,
+:root .ch-contador,
+:root .ch-enviar,
+:root .cp-tabs button { font-size: var(--fs-mini); }
 
 /* ANUNCIO DE ROL */
-:root .mr-sup { font-size: var(--fs-texto); }
-:root .mr-lema { font-size: var(--fs-medio); }
-:root .mr-texto { font-size: var(--fs-texto); line-height: 1.7; }
-:root .mr-secreto { font-size: var(--fs-mini); }
-:root .mr-boton { font-size: var(--fs-boton); }
-:root .mr-panel { width: min(calc(var(--u, 10px) * 48), calc(100vw - 32px)); }
+:root .mr-sup { font-size: calc(var(--fs-texto) + 0.25rem); }
+:root .mr-lema { font-size: calc(var(--fs-medio) + 0.25rem); }
+:root .mr-texto { font-size: calc(var(--fs-texto) + 0.25rem); line-height: 1.7; }
+:root .mr-secreto { font-size: calc(var(--fs-mini) + 0.25rem); }
+:root .mr-boton { font-size: calc(var(--fs-boton) + 0.25rem); }
+:root .mr-panel { width: min(max(34rem, calc(var(--u, 10px) * 51)), calc(100vw - 32px)); }
 
 /* RESUMEN*/
 :root .rs-subtitulo { font-size: var(--fs-medio); }
@@ -114,3 +129,24 @@
 :root .rs-boton { font-size: var(--fs-boton); }
 :root .rs-boton small { font-size: var(--fs-mini); }
 :root .rs-error { font-size: var(--fs-texto); }
+:root button:is(.btn, .btn-crear, .cerrar, .cs-crear, .cs-opcion, .cs-con-texto, .login-boton,
+  .pm-btn, .pe-boton, .mr-boton, .rt-btn, .rs-boton, .ch-enviar) {
+  color: #fff;
+  text-shadow: 0 1px 1px #23150c, 0 0 2px #23150c;
+}
+:root button:is(.pm-btn-verde, .rt-btn-verde) { color: #fff !important; }
+:root button:is(.btn, .btn-crear, .cerrar, .cs-crear, .cs-opcion, .cs-con-texto, .login-boton,
+  .pm-btn, .pe-boton, .mr-boton, .rt-btn, .rs-boton, .ch-enviar):not(:disabled) {
+  filter: drop-shadow(0 0 0.18rem #f7ca7460);
+}
+:root button:is(.btn, .btn-crear, .cerrar, .cs-crear, .cs-opcion, .cs-con-texto, .login-boton,
+  .pm-btn, .pe-boton, .mr-boton, .rt-btn, .rs-boton, .ch-enviar):not(:disabled):hover {
+  filter: brightness(1.08) drop-shadow(0 0 0.26rem #f7ca7480);
+}
+:root[data-c15-movimiento-reducido] *,
+:root[data-c15-movimiento-reducido] *::before,
+:root[data-c15-movimiento-reducido] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

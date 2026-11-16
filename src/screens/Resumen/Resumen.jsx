@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Icono from '../Home/Iconos';
+import { Personaje, colorDe } from '../Partida/MapaIso';
 import { Sesion } from '../../services/sesion';
 import { listarEquipos } from '../../services/salasApi';
 import { gameplayApi } from '../../services/gameplayApi';
@@ -12,7 +13,7 @@ import './Resumen.css';
 const FONDO = '/assets/fondos/Fondo_Resumen.jpeg';
 const FONDO_RESPALDO = '/assets/fondos/Fondo_Lobby.jpeg';
 
-// Igual a la duración de la partida en el back (c15.partida.duracion = 5 min)
+// Si no se sabe cuánto duraba (se entró sin pasar por el lobby), la duración por defecto del back
 const DURACION_DEFECTO_SEG = 5 * 60;
 
 const mmss = (seg) => {
@@ -43,7 +44,7 @@ function useConteo(objetivo, duracionMs = 1200) {
   return valor;
 }
 
-export default function Resumen() {
+export default function Resumen({ admin }) {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -57,6 +58,7 @@ export default function Resumen() {
   const [totalAcertijos, setTotalAcertijos] = useState(null);
   const [segRestantes, setSegRestantes] = useState(state?.segundosRestantes ?? null);
   const [error, setError] = useState(null);
+  const [avisoCopia, setAvisoCopia] = useState('');
   const [mute, setMute] = useState(() => {
     try { return sessionStorage.getItem('c15.mute') === '1'; } catch { return false; }
   });
@@ -130,21 +132,20 @@ export default function Resumen() {
   const empate = !!resultado?.empate &&
     ((resultado?.equiposEmpatados ?? []).length === 0 || resultado.equiposEmpatados.includes(miEquipoId));
   const gane = !empate && !!resultado && resultado.equipoGanadorId === miEquipoId;
-  const perdi = !!resultado && !gane && !empate;
 
+  const equipoEscapo = resultado?.motivo === 'ACERTIJOS_COMPLETOS' ? resultado.equipoGanadorId : null;
+  const escapo = !!equipoEscapo && equipoEscapo === miEquipoId;
+  const estadoEscape = !resultado ? '' : escapo ? 'escape' : 'sin-escape';
   const titulo = !resultado ? 'FIN DE LA PARTIDA'
-    : gane ? '¡SALA COMPLETADA!'
-    : empate ? '¡EMPATE!'
-    : resultado.motivo === 'ACERTIJOS_COMPLETOS' ? '¡TE GANARON LA SALIDA!'
-    : '¡TIEMPO AGOTADO!';
-
+    : escapo ? '¡LOGRARON ESCAPAR!' : '¡NO LOGRARON ESCAPAR!';
   const subtitulo = !resultado ? ''
-    : gane ? `EL EQUIPO ${numeroEquipo(miEquipoId)} LOGRÓ ESCAPAR`
-    : empate ? 'NINGÚN EQUIPO SE IMPUSO'
-    : resultado.equipoGanadorId ? `EL EQUIPO ${numeroEquipo(resultado.equipoGanadorId)} ESCAPÓ PRIMERO`
-    : 'NADIE LOGRÓ ESCAPAR';
+    : equipoEscapo ? `EL EQUIPO ${numeroEquipo(equipoEscapo)} ENCONTRÓ LA SALIDA`
+    : empate ? 'SE ACABÓ EL TIEMPO · EMPATE EN PUNTOS'
+    : resultado.equipoGanadorId ? `SE ACABÓ EL TIEMPO · EQUIPO ${numeroEquipo(resultado.equipoGanadorId)} PRIMERO EN PUNTOS`
+    : 'SE ACABÓ EL TIEMPO';
 
-  const duracion = resultado?.duracionSegundos ?? DURACION_DEFECTO_SEG;
+  const minutosPartida = Sesion.obtener('minutosPartida');
+  const duracion = resultado?.duracionSegundos ?? (minutosPartida ? minutosPartida * 60 : DURACION_DEFECTO_SEG);
   const usado = segRestantes == null ? null : duracion - segRestantes;
   const puntos = useConteo(miFila?.puntaje ?? 0);
 
@@ -159,6 +160,15 @@ export default function Resumen() {
     if (rol.startsWith('VER')) return { texto: 'VERDUGO', clase: 'verdugo' };
     return { texto: 'PARTICIPÓ', clase: 'participo' };
   };
+
+  async function copiarPartida() {
+    try {
+      await navigator.clipboard.writeText(matchId);
+      setAvisoCopia('ID copiado');
+    } catch {
+      setAvisoCopia('Selecciona el ID para copiarlo manualmente.');
+    }
+  }
 
   //Acciones
   const limpiarPartida = () => {
@@ -187,13 +197,21 @@ export default function Resumen() {
         <Icono nombre={mute ? 'mute' : 'sonido'} className="rs-esquina__icono" />
       </button>
 
-      <main className={`rs-panel ${perdi ? 'rs-panel--derrota' : ''}`}>
+      <main className={`rs-panel ${estadoEscape ? `rs-panel--${estadoEscape}` : ''}`}>
         <div className="rs-llave"><Icono nombre="llave" className="rs-llave__icono" /></div>
 
         <header className="rs-cabecera">
           <h1 className="rs-titulo">{titulo}</h1>
           {subtitulo && <p className="rs-subtitulo">{subtitulo}</p>}
         </header>
+
+        {admin && resultado && <section className="adm-tecnico" aria-label="Datos técnicos de la partida">
+          <span>Partida <code>{matchId}</code></span>
+          <button onClick={copiarPartida}>Copiar ID</button>
+          <span>Tiempo jugado {usado == null ? '—' : mmss(usado)}</span>
+          <span>Motivo {String(resultado.motivo ?? '—').replaceAll('_', ' ')}</span>
+          {avisoCopia && <span role="status">{avisoCopia}</span>}
+        </section>}
 
         {error && !resultado && <p className="rs-error">{error}</p>}
 
@@ -229,7 +247,7 @@ export default function Resumen() {
             return (
               <div key={id} className={`rs-jugador ${soyYo ? 'rs-jugador--yo' : ''}`}>
                 {soyYo && <span className="rs-jugador__tu">TÚ</span>}
-                <Icono nombre="persona" className="rs-jugador__avatar" />
+                <span className="rs-jugador__avatar"><Personaje {...colorDe(id)} /></span>
                 <span className="rs-jugador__nombre">
                   {nombreDe(id).toUpperCase()}
                 </span>
@@ -240,7 +258,7 @@ export default function Resumen() {
         </section>
 
         {/* Estadísticas */}
-        <section className="rs-fila rs-fila--tres">
+        <section className="rs-fila rs-fila--tres rs-estadisticas">
           <div className="rs-caja rs-caja--chica">
             <span className="rs-caja__etq">ACERTIJOS RESUELTOS</span>
             <span className="rs-caja__valor">

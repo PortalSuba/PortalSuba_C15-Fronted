@@ -1,22 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SalaCard, { codigoDe } from './SalaCard';
 import Icono from './Iconos';
+import Ranking from './Ranking';
+import Amigos from './Amigos';
+import { Ajustes, Perfil } from './Preferencias';
+import { AJUSTES_INICIALES, aplicarAjustes, claveAjustes, guardarLocal, leerAjustes, leerLocal } from './almacenLocal';
+import Chat from '../../components/Chat';
 import { useTopic } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
-import { listarSalas, crearSala, unirseASala } from '../../services/salasApi';
+import { listarSalas, unirseASala } from '../../services/salasApi';
+import { estadisticasDe } from '../../services/estadisticasApi';
+import { canales } from '../../services/chatApi';
 import { Sesion } from '../../services/sesion';
+import { authApi } from '../../services/authApi';
+import ConfirmarCerrarSesion from '../../components/ConfirmarCerrarSesion';
 import './Home.css';
+import './PanelesHome.css';
 import { topics } from '../../config';
 
 const FONDO = '/assets/fondos/Fondo_Lobby.jpeg';
 const AVATAR = '/assets/avatares/avatar_1.png';
-const MINIATURAS = [
-  '/assets/salas/sala_1.png',
-  '/assets/salas/sala_2.png',
-  '/assets/salas/sala_3.png',
-  '/assets/salas/sala_4.png',
-];
+const MINIATURA_BIBLIOTECA = '/assets/fondos/Fondo_mapa.jpeg';
 
 const TABS = [
   { id: 'salas', texto: 'SALAS', icono: 'salas' },
@@ -25,8 +30,9 @@ const TABS = [
   { id: 'ajustes', texto: 'AJUSTES', icono: 'ajustes' },
 ];
 
-export default function Home() {
+export default function Home({ admin }) {
   const navegar = useNavigate();
+  const avisoAlEntrar = useLocation().state?.aviso;
   const userId = Sesion.userId;
   const username = Sesion.username;
 
@@ -34,15 +40,29 @@ export default function Home() {
   const nombreDe = useNombres(salas.map((s) => s.anfitrionId));
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState('');
-  const [silenciado, setSilenciado] = useState(false);
-  const [tabChat, setTabChat] = useState('mensajes');
+  const canalGlobal = useMemo(() => canales.global(), []);
+  const [vista, setVista] = useState('salas');
+  const [puntos, setPuntos] = useState(0);
+  const [alias, setAlias] = useState(() => leerLocal('c15.alias.' + userId, ''));
+  const [ajustes, setAjustes] = useState(() => leerAjustes(userId));
+  const nombreVisible = alias || username;
+  const silenciado = !ajustes.efectos;
   const [codigo, setCodigo] = useState(['', '', '', '']);
-  const [popup, setPopup] = useState(false);
-  const [nombreSala, setNombreSala] = useState('');
-  const [errorCrear, setErrorCrear] = useState('');
-  const [creando, setCreando] = useState(false);
   const temporizador = useRef(null);
   const casillas = useRef([]);
+  const tituloVista = useRef(null);
+  const [chatAbierto, setChatAbierto] = useState(false);
+  const botonChat = useRef(null);
+  const botonCerrarChat = useRef(null);
+
+  useEffect(() => {
+    if (chatAbierto) botonCerrarChat.current?.focus();
+  }, [chatAbierto]);
+
+  function cerrarChat() {
+    setChatAbierto(false);
+    botonChat.current?.focus();
+  }
 
   useEffect(() => {
     if (!userId) navegar('/');
@@ -57,6 +77,39 @@ export default function Home() {
 
    useTopic(topics.salas(), setSalas);
 
+  // Aviso de la pantalla de la que viene; se borra del historial para que no salga otra vez al recargar
+  useEffect(() => {
+    if (!avisoAlEntrar) return;
+    avisar(avisoAlEntrar);
+    window.history.replaceState(null, '');
+  }, [avisoAlEntrar]);
+
+  useEffect(() => {
+    if (userId) estadisticasDe(userId).then((e) => setPuntos(e.puntos)).catch(() => {});
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) aplicarAjustes(ajustes);
+  }, [userId, ajustes]);
+
+  useEffect(() => {
+    if (vista === 'perfil') tituloVista.current?.focus();
+  }, [vista]);
+
+  function guardarAlias(nuevo) {
+    if (!guardarLocal('c15.alias.' + userId, nuevo)) return false;
+    setAlias(nuevo);
+    return true;
+  }
+
+  function cambiarAjuste(clave, valor) {
+    const nuevos = { ...ajustes, [clave]: valor };
+    if (clave === 'chatGlobal' && !valor) setChatAbierto(false);
+    aplicarAjustes(nuevos);
+    setAjustes(nuevos);
+    if (!guardarLocal(claveAjustes(userId), nuevos)) avisar('El ajuste se aplicó durante esta sesión.');
+  }
+
   function avisar(texto) {
     setAviso(texto);
     clearTimeout(temporizador.current);
@@ -65,7 +118,7 @@ export default function Home() {
 
   async function entrar(sala) {
     try {
-      if (sala.anfitrionId !== userId) await unirseASala(sala.id, userId);
+      if (sala.anfitrionId !== userId) await unirseASala(sala.id);
       Sesion.guardar('salaId', sala.id);
       navegar(`/sala/${sala.id}`);
     } catch (e) {
@@ -98,26 +151,9 @@ export default function Home() {
     navegar('/crear-sala');
   }
 
-  async function crear() {
-    const nombre = nombreSala.trim();
-    if (!nombre) return setErrorCrear('Ponle un nombre a la sala');
-
-    setCreando(true);
-    try {
-      const sala = await crearSala(nombre, userId);
-      // El back no mete al anfitrión en la sala automáticamente: hay que unirlo
-      await unirseASala(sala.id, userId);
-      Sesion.guardar('salaId', sala.id);
-      navegar(`/sala/${sala.id}`);
-    } catch (e) {
-      setErrorCrear(e.message);
-      setCreando(false);
-    }
-  }
-
   function cerrarSesion() {
-    Sesion.limpiar();
-    navegar('/');
+    aplicarAjustes(AJUSTES_INICIALES);
+    authApi.logout();
   }
 
   if (!userId) return null;
@@ -127,45 +163,26 @@ export default function Home() {
 
   return (
     <div className="home-root">
-      <div className="home-stage" style={{ backgroundImage: `url(${FONDO})` }}>
+      <div className={`home-stage home-stage--${vista}`} style={{ backgroundImage: `url(${FONDO})` }}>
         {/* ================= BARRA LATERAL ================= */}
-        <aside className="lateral">
+        <aside className="lateral" aria-label="Jugador y salas">
           {/* Identificación */}
           <section className="placa placa-id">
             <p className="placa__rotulo">IDENTIFIC.</p>
-            <div className="carnet">
-              <div className="carnet__barra"><Icono nombre="tarjeta" /> IDENTIFIC.</div>
-              <div className="carnet__cuerpo">
-                <div className="carnet__avatar">
-                  <span>{username?.[0]?.toUpperCase()}</span>
+            <button type="button" className="carnet" onClick={() => setVista('perfil')} aria-label="Abrir mi perfil">
+              <span className="carnet__barra"><Icono nombre="tarjeta" /> VER PERFIL {admin && <strong className="carnet__sello-admin">ADMIN</strong>}</span>
+              <span className="carnet__cuerpo">
+                <span className="carnet__avatar">
+                  <span>{nombreVisible?.[0]?.toUpperCase()}</span>
                   <img src={AVATAR} alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                </div>
-                <div className="carnet__datos">
-                  <p className="carnet__nombre">{username}</p>
-                  <p className="carnet__rango">SOBREVIVIENTE</p>
-                  <hr />
-                  <p className="carnet__puntos"><Icono nombre="llave" /> PUNTOS: 0</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Mensajes / amigos (fuera del sprint 1: solo maqueta) */}
-          <section className="placa placa-chat">
-            <div className="chat-tabs">
-              <button className={tabChat === 'mensajes' ? 'activa' : ''} onClick={() => setTabChat('mensajes')}>MENSAJES</button>
-              <button className={tabChat === 'amigos' ? 'activa' : ''} onClick={() => setTabChat('amigos')}>AMIGOS</button>
-            </div>
-            <div className="chat-lista" title="Disponible en una próxima versión">
-              {[0, 1].map((i) => (
-                <div className="chat-fila" key={i}>
-                  <span className="chat-avatar" />
-                  <span className={`chat-punto ${i === 0 ? 'on' : 'off'}`} />
-                  <span className="chat-lineas"><i /><i /></span>
-                </div>
-              ))}
-              <span className="chat-scroll" />
-            </div>
+                </span>
+                <span className="carnet__datos">
+                  <span className="carnet__nombre">{nombreVisible}</span>
+                  <span className="carnet__rango">SOBREVIVIENTE</span>
+                  <span className="carnet__puntos"><Icono nombre="llave" /> PUNTOS: {puntos}</span>
+                </span>
+              </span>
+            </button>
           </section>
 
           {/* Unirse por código */}
@@ -179,6 +196,7 @@ export default function Home() {
                   ref={(el) => (casillas.current[i] = el)}
                   value={letra}
                   placeholder="-"
+                  aria-label={`Carácter ${i + 1} del código`}
                   maxLength={2}
                   onChange={(e) => escribirCodigo(i, e.target.value)}
                   onKeyDown={(e) => teclaCodigo(i, e)}
@@ -201,83 +219,86 @@ export default function Home() {
 
         {/* CONTENIDO */}
         <main className="contenido">
-          <p className="rotulo-nav">NAVEGACIÓN</p>
-          <nav className="nav">
+          <div className="rotulo-nav home-nav-encabezado">
+            <span>NAVEGACIÓN</span>
+            {admin && <Link className="adm-enlace-home" to="/admin">
+              <Icono nombre="ajustes" /> PANEL ADMIN
+            </Link>}
+          </div>
+          <nav className="nav" aria-label="Menú principal">
             <div className="tabs">
               {TABS.map((t) => (
                 <button
                   key={t.id}
-                  className={`tab ${t.id === 'salas' ? 'activa' : ''}`}
-                  onClick={() => t.id !== 'salas' && avisar(`${t.texto} no está disponible en esta versión`)}
+                  className={`tab ${t.id === vista ? 'activa' : ''}`}
+                  aria-pressed={t.id === vista}
+                  onClick={() => setVista(t.id)}
                 >
                   <Icono nombre={t.icono} /> {t.texto}
                 </button>
               ))}
             </div>
-            <button className="icono-btn" onClick={() => setSilenciado(!silenciado)}
-                    title={silenciado ? 'Activar sonido' : 'Silenciar'}>
-              <Icono nombre={silenciado ? 'mute' : 'sonido'} />
-            </button>
-            <button className="icono-btn" onClick={() => avisar('El chat no está disponible en esta versión')}
-                    title="Mensajes">
-              <Icono nombre="sobre" />
-            </button>
-            <button className="cerrar" onClick={cerrarSesion}>
-              <Icono nombre="salir" /><span>CERRAR<br />SESIÓN</span>
-            </button>
+            <div className="nav-sesion">
+              <ConfirmarCerrarSesion className="cerrar" onConfirmar={cerrarSesion}>
+                <Icono nombre="salir" /><span>CERRAR SESIÓN</span>
+              </ConfirmarCerrarSesion>
+              <button className="icono-btn" onClick={() => cambiarAjuste('efectos', silenciado)}
+                      aria-label={silenciado ? 'Activar sonido' : 'Silenciar'} aria-pressed={silenciado}>
+                <Icono nombre={silenciado ? 'mute' : 'sonido'} />
+              </button>
+            </div>
           </nav>
 
-          <h1 className="titulo-salas">SALAS DISPONIBLES</h1>
+          <h1 ref={tituloVista} tabIndex={-1} className="titulo-salas">
+            {{ salas: 'SALAS DISPONIBLES', ranking: 'RANKING', amigos: 'AMIGOS', ajustes: 'AJUSTES', perfil: 'MI PERFIL' }[vista]}
+          </h1>
 
-          <div className="grid-salas">
-            {cargando && <p className="mensaje-grid">CARGANDO SALAS...</p>}
+          <div className={`home-vista home-vista--${vista}`}>
+            {vista === 'ranking' && <Ranking userId={userId} />}
+            {vista === 'amigos' && <Amigos userId={userId} />}
+            {vista === 'ajustes' && <Ajustes ajustes={ajustes} onCambiar={cambiarAjuste} />}
+            {vista === 'perfil' && <Perfil username={username} alias={alias} puntos={puntos} onGuardar={guardarAlias} />}
+            {vista === 'salas' && <div className="grid-salas">
+              {cargando && <p className="mensaje-grid">CARGANDO SALAS...</p>}
 
-            {!cargando && salas.map((sala, i) => (
-              <SalaCard
-                key={sala.id}
-                sala={sala}
-                userId={userId}
-                nombreLider={nombreDe(sala.anfitrionId)}
-                miniatura={MINIATURAS[i % MINIATURAS.length]}
-                onEntrar={entrar}
-              />
-            ))}
+              {!cargando && salas.map((sala) => (
+                <SalaCard
+                  key={sala.id}
+                  sala={sala}
+                  userId={userId}
+                  nombreLider={nombreDe(sala.anfitrionId)}
+                  miniatura={MINIATURA_BIBLIOTECA}
+                  onEntrar={entrar}
+                />
+              ))}
 
-            {Array.from({ length: vacias }, (_, i) => (
-              <button key={'v' + i} className="sala vacia" onClick={abrirCrear}>
-                <span>ESPACIO LIBRE</span>
-                <small>+ CREAR UNA SALA</small>
-              </button>
-            ))}
+              {Array.from({ length: vacias }, (_, i) => (
+                <button key={'v' + i} className="sala vacia" onClick={abrirCrear}>
+                  <span>ESPACIO LIBRE</span>
+                  <small>+ CREAR UNA SALA</small>
+                </button>
+              ))}
+            </div>}
           </div>
         </main>
 
-        <button className="volver" onClick={cerrarSesion} title="Volver al inicio">
-          <Icono nombre="flecha" />
-        </button>
-
-        {/* POPUP CREAR SALA*/}
-        {popup && (
-          <div className="popup-fondo" onClick={() => !creando && setPopup(false)}>
-            <div className="popup" onClick={(e) => e.stopPropagation()}>
-              <header className="sala__titulo">NUEVA SALA</header>
-              <input
-                className="popup-input"
-                value={nombreSala}
-                maxLength={30}
-                autoFocus
-                placeholder="NOMBRE DE LA SALA"
-                onChange={(e) => setNombreSala(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && crear()}
-              />
-              <p className="popup-error">{errorCrear}</p>
-              <div className="popup-botones">
-                <button className="btn btn-marron" onClick={() => setPopup(false)} disabled={creando}>CANCELAR</button>
-                <button className="btn btn-verde" onClick={crear} disabled={creando}>
-                  {creando ? 'CREANDO...' : 'CREAR'}
-                </button>
-              </div>
-            </div>
+        {ajustes.chatGlobal && (
+          <div className="home-chat-flotante">
+            <section id="home-chat-global" className="placa home-chat" hidden={!chatAbierto}
+              aria-labelledby="home-chat-titulo" onKeyDown={(e) => {
+                if (e.key === 'Escape') cerrarChat();
+              }}>
+              <header className="home-chat__cabecera">
+                <h2 id="home-chat-titulo">CHAT GLOBAL</h2>
+                <button type="button" className="tab home-chat__cerrar" ref={botonCerrarChat}
+                  onClick={cerrarChat} aria-label="Cerrar chat global">×</button>
+              </header>
+              <Chat canal={canalGlobal} userId={userId} visible={chatAbierto} />
+            </section>
+            <button type="button" className="tab home-chat__abrir" ref={botonChat} aria-expanded={chatAbierto}
+              aria-controls="home-chat-global" onClick={chatAbierto ? cerrarChat : () => setChatAbierto(true)}>
+              <Icono nombre="sobre" /> CHAT
+            </button>
           </div>
         )}
 
