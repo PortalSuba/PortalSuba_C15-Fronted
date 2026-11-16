@@ -133,7 +133,6 @@
 .carnet__datos { flex: 1; min-width: 0; }
 .carnet__nombre { font-size: var(--home-texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .carnet__rango { display: block; font-size: var(--home-detalle); color: #6b5636; margin-top: calc(var(--u) * 0.4) !important; }
-.carnet:hover .carnet__barra { filter: brightness(1.15); }
 .carnet__puntos { border-top: 1px dashed #a08a5c; padding-top: 0.3rem; margin-top: 0.35rem; display: flex; align-items: center; gap: calc(var(--u) * 0.5); font-size: var(--home-texto); }
 .carnet__puntos .icono-px { color: #b8752a; }
 
@@ -214,6 +213,9 @@
 .tab, .cerrar { min-width: 0; min-height: 2.5rem; padding: 0.25rem; text-align: center; justify-content: center; }
 .tab:hover,
 .icono-btn:hover { border-color: #7a7068; }
+/* Pestana que todavia no existe (Amigos): se ve apagada y no responde */
+.tab:disabled { opacity: 0.45; cursor: not-allowed; }
+.tab:disabled:hover { border-color: #57504a; }
 .tab.activa {
   color: #2a1d0e;
   background: var(--h-dorado);

@@ -4,8 +4,8 @@ import SalaCard, { codigoDe } from './SalaCard';
 import Icono from './Iconos';
 import Ranking from './Ranking';
 import Amigos from './Amigos';
-import { Ajustes, Perfil } from './Preferencias';
-import { AJUSTES_INICIALES, aplicarAjustes, claveAjustes, guardarLocal, leerAjustes, leerLocal } from './almacenLocal';
+import { Ajustes } from './Preferencias';
+import { AJUSTES_INICIALES, aplicarAjustes, claveAjustes, guardarLocal, leerAjustes } from './almacenLocal';
 import Chat from '../../components/Chat';
 import { useTopic } from '../../hooks/useSocket';
 import { useNombres } from '../../hooks/useNombres';
@@ -26,7 +26,8 @@ const MINIATURA_BIBLIOTECA = '/assets/fondos/Fondo_mapa.jpeg';
 const TABS = [
   { id: 'salas', texto: 'SALAS', icono: 'salas' },
   { id: 'ranking', texto: 'RANKING', icono: 'ranking' },
-  { id: 'amigos', texto: 'AMIGOS', icono: 'persona' },
+  // Sin amigos en el back todavia: la pestana se ve pero no se puede abrir (para todos)
+  { id: 'amigos', texto: 'AMIGOS', icono: 'persona', proximamente: true },
   { id: 'ajustes', texto: 'AJUSTES', icono: 'ajustes' },
 ];
 
@@ -43,9 +44,8 @@ export default function Home({ admin }) {
   const canalGlobal = useMemo(() => canales.global(), []);
   const [vista, setVista] = useState('salas');
   const [puntos, setPuntos] = useState(0);
-  const [alias, setAlias] = useState(() => leerLocal('c15.alias.' + userId, ''));
   const [ajustes, setAjustes] = useState(() => leerAjustes(userId));
-  const nombreVisible = alias || username;
+  const nombreVisible = username;
   const silenciado = !ajustes.efectos;
   const [codigo, setCodigo] = useState(['', '', '', '']);
   const temporizador = useRef(null);
@@ -92,15 +92,6 @@ export default function Home({ admin }) {
     if (userId) aplicarAjustes(ajustes);
   }, [userId, ajustes]);
 
-  useEffect(() => {
-    if (vista === 'perfil') tituloVista.current?.focus();
-  }, [vista]);
-
-  function guardarAlias(nuevo) {
-    if (!guardarLocal('c15.alias.' + userId, nuevo)) return false;
-    setAlias(nuevo);
-    return true;
-  }
 
   function cambiarAjuste(clave, valor) {
     const nuevos = { ...ajustes, [clave]: valor };
@@ -169,8 +160,8 @@ export default function Home({ admin }) {
           {/* Identificación */}
           <section className="placa placa-id">
             <p className="placa__rotulo">IDENTIFIC.</p>
-            <button type="button" className="carnet" onClick={() => setVista('perfil')} aria-label="Abrir mi perfil">
-              <span className="carnet__barra"><Icono nombre="tarjeta" /> VER PERFIL {admin && <strong className="carnet__sello-admin">ADMIN</strong>}</span>
+            <div className="carnet">
+              <span className="carnet__barra"><Icono nombre="tarjeta" /> CREDENCIAL {admin && <strong className="carnet__sello-admin">ADMIN</strong>}</span>
               <span className="carnet__cuerpo">
                 <span className="carnet__avatar">
                   <span>{nombreVisible?.[0]?.toUpperCase()}</span>
@@ -182,7 +173,7 @@ export default function Home({ admin }) {
                   <span className="carnet__puntos"><Icono nombre="llave" /> PUNTOS: {puntos}</span>
                 </span>
               </span>
-            </button>
+            </div>
           </section>
 
           {/* Unirse por código */}
@@ -232,6 +223,8 @@ export default function Home({ admin }) {
                   key={t.id}
                   className={`tab ${t.id === vista ? 'activa' : ''}`}
                   aria-pressed={t.id === vista}
+                  disabled={t.proximamente}
+                  title={t.proximamente ? 'Próximamente' : undefined}
                   onClick={() => setVista(t.id)}
                 >
                   <Icono nombre={t.icono} /> {t.texto}
@@ -250,14 +243,13 @@ export default function Home({ admin }) {
           </nav>
 
           <h1 ref={tituloVista} tabIndex={-1} className="titulo-salas">
-            {{ salas: 'SALAS DISPONIBLES', ranking: 'RANKING', amigos: 'AMIGOS', ajustes: 'AJUSTES', perfil: 'MI PERFIL' }[vista]}
+            {{ salas: 'SALAS DISPONIBLES', ranking: 'RANKING', amigos: 'AMIGOS', ajustes: 'AJUSTES' }[vista]}
           </h1>
 
           <div className={`home-vista home-vista--${vista}`}>
             {vista === 'ranking' && <Ranking userId={userId} />}
             {vista === 'amigos' && <Amigos userId={userId} />}
             {vista === 'ajustes' && <Ajustes ajustes={ajustes} onCambiar={cambiarAjuste} />}
-            {vista === 'perfil' && <Perfil username={username} alias={alias} puntos={puntos} onGuardar={guardarAlias} />}
             {vista === 'salas' && <div className="grid-salas">
               {cargando && <p className="mensaje-grid">CARGANDO SALAS...</p>}
 
