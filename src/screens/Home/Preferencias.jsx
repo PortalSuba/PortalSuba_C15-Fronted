@@ -65,7 +65,7 @@ export function Perfil({ username, alias, puntos, onGuardar }) {
         <input id="home-alias" value={nombre} maxLength={24} autoComplete="off"
           onChange={(e) => { setNombre(e.target.value); setMensaje(''); }} />
         <p className="home-ayuda">Solo aparece en tu credencial de este navegador. Déjalo vacío para mostrar el nombre de tu cuenta.</p>
-        <button className="btn btn-verde" disabled={nombre.trim() === alias}>GUARDAR ALIAS</button>
+        <button type="submit" className="btn btn-verde" disabled={nombre.trim() === alias}>GUARDAR ALIAS</button>
         {mensaje && <p role="status">{mensaje}</p>}
       </form>
     </section>

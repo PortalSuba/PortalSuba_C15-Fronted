@@ -116,7 +116,7 @@ export default function Chat({ canal, userId, titulo, visible = true, onNuevo })
           aria-label="Mensaje"
           onChange={(e) => { setTexto(e.target.value); setError(null); }}
         />
-        <button className="ch-enviar" disabled={!texto.trim() || enviando}>ENVIAR</button>
+        <button type="submit" className="ch-enviar" disabled={!texto.trim() || enviando}>ENVIAR</button>
       </form>
       {texto.length >= MAX_LONGITUD_MENSAJE - 20 && (
         <p className="ch-contador">{texto.length}/{MAX_LONGITUD_MENSAJE}</p>

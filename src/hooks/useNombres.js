@@ -7,12 +7,12 @@ import { cargarNombres, nombreDe } from '../services/usuariosApi';
  */
 export function useNombres(ids) {
   const [version, setVersion] = useState(0);
-  const clave = [...new Set((ids ?? []).filter(Boolean))].sort().join(',');
+  const clave = [...new Set((ids ?? []).filter(Boolean))].sort((a, b) => a.localeCompare(b)).join(',');
 
   useEffect(() => {
     if (!clave) return;
     let vivo = true;
-    cargarNombres(clave.split(',')).then((nuevos) => {
+    void cargarNombres(clave.split(',')).then((nuevos) => {
       if (vivo && nuevos) setVersion((v) => v + 1);
     });
     return () => { vivo = false; };

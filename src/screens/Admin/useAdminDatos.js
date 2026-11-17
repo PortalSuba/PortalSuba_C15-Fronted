@@ -21,7 +21,7 @@ function useConsulta(consultar, parametro, refresco = 0) {
       }
     }
 
-    cargar();
+    void cargar();
     return () => { activo = false; clearTimeout(temporizador); };
   }, [consultar, parametro, refresco, intento]);
 

@@ -29,7 +29,7 @@ export default function RetoHeroeVerdugo() {
 
   useEffect(() => {
     if (!userId) { navegar('/'); return; }
-    (async () => {
+    void (async () => {
       try {
         const equipos = (await listarEquipos(matchId))
           .filter((e) => e.miembros.length)

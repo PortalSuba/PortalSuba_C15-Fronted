@@ -1,18 +1,98 @@
-name: Deploy front
+name: CI y deploy del front
 
-# Build (Vite) y despliegue a Azure Static Web Apps en cada push a main.
+# Pruebas (Vitest + cobertura) y SonarQube Cloud en cada PR y push a main.
+# El deploy a Azure Static Web Apps solo en push a main y solo si el quality gate pasa.
 # Las URLs del back salen de Settings > Secrets and variables > Actions > Variables.
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
 concurrency:
-  group: deploy-front
-  cancel-in-progress: false
+  group: front-${{ github.ref }}
+  # En main no se cancela para no cortar un deploy a la mitad
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  test:
+    name: Pruebas + cobertura
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Dependencias
+        run: npm ci
+
+      # Falla si la cobertura de lineas baja de 40 % (vite.config.js)
+      - name: Pruebas + cobertura
+        run: npm run coverage
+
+      - name: Resumen de cobertura
+        if: always()
+        run: |
+          f=coverage/lcov.info
+          [ -f "$f" ] || { echo "::warning::No se encontro $f"; exit 0; }
+          awk -F: '/^LF:/ { t+=$2 } /^LH:/ { c+=$2 } END { printf "### Cobertura Vitest (lineas): %.1f%% (%d de %d)\n", (t>0 ? 100*c/t : 0), c, t }' "$f" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir reporte de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: warn
+
+  analysis:
+    name: Analisis (SonarQube Cloud)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      RUN_SONAR: ${{ secrets.SONAR_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Sonar necesita el historial para el blame / codigo nuevo
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Descargar reporte de cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+      # Lee sonar-project.properties; espera el quality gate y falla si queda en rojo
+      - name: Analizar con SonarQube Cloud
+        if: env.RUN_SONAR == 'true'
+        run: npx --yes @sonar/scan@5.1.0 -Dsonar.qualitygate.wait=true
+
+      - name: Sonar omitido
+        if: env.RUN_SONAR != 'true'
+        run: echo "::notice::Sonar omitido (falta el secret SONAR_TOKEN)."
+
   deploy:
     name: Build y deploy
+    needs: [test, analysis]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

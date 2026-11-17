@@ -106,7 +106,7 @@ export default function Partida({ admin }) {
   useEffect(() => {
     if (!userId) { navegar('/'); return; }
     let vivo = true;
-    (async () => {
+    void (async () => {
       try {
         const salas = await listarSalas();
         const s = salas.find((x) => x.id === salaId);
@@ -263,7 +263,7 @@ export default function Partida({ admin }) {
     animRef.current[p.userId] = turno;
     // Movimiento de varias celdas (click): se anima paso a paso como el propio, en vez de saltar
     if (p.conectado && antes && p.ruta?.length > 1) {
-      animarCompanero(p.userId, p.ruta, turno);
+      void animarCompanero(p.userId, p.ruta, turno);
       return;
     }
     setPosiciones((prev) => {
@@ -371,7 +371,7 @@ export default function Partida({ admin }) {
         setAcertijo(dto);
       } else if (cercano.tipo === 'LLAVE') {
         await gameplayApi.recolectar(matchId, cercano.id);
-        reproducirEfecto('llave');
+        void reproducirEfecto('llave');
       } else if (cercano.tipo === 'PUERTA') {
         const llaves = inventario.length;
         avisar(llaves ? `TU EQUIPO TIENE ${llaves} LLAVE(S)` : 'LA PUERTA ESTÁ CERRADA · BUSCA LAS LLAVES');
@@ -393,7 +393,7 @@ export default function Partida({ admin }) {
   }
 
   function acertijoResuelto(componenteId) {
-    reproducirEfecto('acertijo');
+    void reproducirEfecto('acertijo');
     setResueltos((s) => new Set(s).add(componenteId));
     anunciar(`${username} RESOLVIÓ EL ACERTIJO ${numeroDe(componenteId)}`, userId);
     setTimeout(() => setAcertijo(null), 1500);
@@ -410,9 +410,9 @@ export default function Partida({ admin }) {
         e.preventDefault();
         const [dx, dy] = TECLAS[e.key];
         const yo = posRef.current[userId];
-        moverA({ x: yo.x + dx, y: yo.y + dy });
+        void moverA({ x: yo.x + dx, y: yo.y + dy });
       }
-      if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') interactuar();
+      if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') void interactuar();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

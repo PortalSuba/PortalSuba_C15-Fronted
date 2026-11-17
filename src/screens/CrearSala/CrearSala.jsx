@@ -76,7 +76,7 @@ export default function CrearSala() {
   }
 
   function cerrarSesion() {
-    authApi.logout();
+    void authApi.logout();
   }
 
   if (!userId) return null;

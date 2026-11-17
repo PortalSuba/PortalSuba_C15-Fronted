@@ -61,7 +61,7 @@ function BuscarError({ codigo, onBuscar }) {
       <input id="adm-codigo" value={entrada} autoComplete="off" spellCheck={false} maxLength={32}
         aria-invalid={!!validacion} aria-describedby={validacion ? 'adm-validacion' : undefined}
         onChange={(e) => { setEntrada(e.target.value); setValidacion(''); }} />
-      <button className="adm-boton" disabled={consulta.cargando}>Buscar</button>
+      <button type="submit" className="adm-boton" disabled={consulta.cargando}>Buscar</button>
     </form>
     {validacion && <p id="adm-validacion" role="alert">{validacion}</p>}
     <EstadoConsulta consulta={consulta}>

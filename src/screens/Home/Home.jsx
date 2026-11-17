@@ -137,7 +137,7 @@ export default function Home({ admin }) {
     if (texto.length < 4) return avisar('El código tiene 4 caracteres');
     const sala = salas.find((s) => codigoDe(s) === texto);
     if (!sala) return avisar(`No existe una sala con el código ${texto}`);
-    entrar(sala);
+    void entrar(sala);
   }
 
   //Crear sala
@@ -147,7 +147,7 @@ export default function Home({ admin }) {
 
   function cerrarSesion() {
     aplicarAjustes(AJUSTES_INICIALES);
-    authApi.logout();
+    void authApi.logout();
   }
 
   if (!userId) return null;

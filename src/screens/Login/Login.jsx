@@ -40,7 +40,7 @@ export default function Login() {
       return;
     }
     if (authApi.sesionActual()) { navigate('/home', { replace: true }); return; }
-    (async () => {
+    void (async () => {
       try {
         await completarEntrada();
         if (!(await hayCuenta())) { setEstado('esperando'); return; }

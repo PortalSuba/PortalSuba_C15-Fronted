@@ -72,7 +72,7 @@ export default function Resumen({ admin }) {
 
   useEffect(() => {
     let vivo = true;
-    (async () => {
+    void (async () => {
       if (!resultado) {
         try {
           const r = await gameplayApi.resultado(matchId);
