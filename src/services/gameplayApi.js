@@ -24,6 +24,8 @@ export const gameplayApi = {
 
   // --- acertijos ---
   abrirAcertijo: (m, c) => http.post(`${p(m)}/acertijos/${c}/bloqueo`),
+  // Mirar sin abrir: las pistas propias mientras el compañero lo tiene abierto
+  verAcertijo: (m, c) => http.get(`${p(m)}/acertijos/${c}`),
   cerrarAcertijo: (m, c) => http.del(`${p(m)}/acertijos/${c}/bloqueo`),
   clickAcertijo: (m, c, elementoId, valor) =>
     http.post(`${p(m)}/acertijos/${c}/clicks`, { elementoId, valor }),

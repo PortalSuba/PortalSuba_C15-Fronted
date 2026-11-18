@@ -4,6 +4,7 @@ import Icono from '../Home/Iconos';
 import { codigoDe } from '../Home/SalaCard';
 import MapaIso, { Personaje, colorDe, numeroDe } from './MapaIso';
 import ModalAcertijo from './ModalAcertijo';
+import { tienePistas } from './respuestasAcertijo';
 import { prepararSonido, reproducirEfecto } from '../Home/sonido';
 import ModalDesafio from './ModalDesafio';
 import ModalRol from './ModalRol';
@@ -29,7 +30,8 @@ const TECLAS = {
   ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
   ArrowRight: [1, 0], d: [1, 0], D: [1, 0],
 };
-const PRIORIDAD = { ACERTIJO: 0, LLAVE: 1, PUERTA: 2 };
+const PRIORIDAD = { ACERTIJO: 0, LLAVE: 1, OBJETO: 1, PUERTA: 2 };
+const esLlave = (o) => o.id.startsWith('llave');
 const adyacente = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -55,6 +57,7 @@ export default function Partida({ admin }) {
   const [inventario, setInventario] = useState([]);
   const [resueltos, setResueltos] = useState(() => new Set());
   const [acertijo, setAcertijo] = useState(null);
+  const [pistas, setPistas] = useState(null);
   const [moviendo, setMoviendo] = useState(false);
   const [aviso, setAviso] = useState('');
   const [feed, setFeed] = useState(null);
@@ -361,24 +364,33 @@ export default function Partida({ admin }) {
       .sort((a, b) => PRIORIDAD[a.tipo] - PRIORIDAD[b.tipo])[0] || null;
   }, [mapa, miPos, ocultos]);
 
+  // El compañero tiene el acertijo abierto: si reparte pistas, muestra las mías
+  async function verPistas(componenteId) {
+    const dto = await gameplayApi.verAcertijo(matchId, componenteId).catch(() => null);
+    if (tienePistas(dto)) setPistas(dto);
+    else avisar('UN COMPAÑERO ESTÁ RESOLVIENDO ESTE ACERTIJO');
+  }
+
   async function interactuar() {
-    if (!cercano || acertijo || movRef.current || resultado) return;
+    if (!cercano || acertijo || pistas || movRef.current || resultado) return;
     prepararSonido();
     try {
       if (cercano.tipo === 'ACERTIJO') {
         const dto = await gameplayApi.abrirAcertijo(matchId, cercano.id);
         if (dto.resuelto) setResueltos((s) => new Set(s).add(cercano.id));
         setAcertijo(dto);
-      } else if (cercano.tipo === 'LLAVE') {
+      } else if (cercano.tipo === 'LLAVE' || cercano.tipo === 'OBJETO') {
         await gameplayApi.recolectar(matchId, cercano.id);
         void reproducirEfecto('llave');
       } else if (cercano.tipo === 'PUERTA') {
-        const llaves = inventario.length;
+        const llaves = inventario.filter(esLlave).length;
         avisar(llaves ? `TU EQUIPO TIENE ${llaves} LLAVE(S)` : 'LA PUERTA ESTÁ CERRADA · BUSCA LAS LLAVES');
       }
     } catch (e) {
-      if (e.esConflicto) {
-        avisar(cercano.tipo === 'LLAVE' ? 'UN COMPAÑERO YA LA RECOGIÓ' : 'UN COMPAÑERO ESTÁ RESOLVIENDO ESTE ACERTIJO');
+      if (e.esConflicto && cercano.tipo === 'ACERTIJO') {
+        await verPistas(cercano.id);
+      } else if (e.esConflicto) {
+        avisar('UN COMPAÑERO YA LA RECOGIÓ');
       } else {
         avisar(e.message.toUpperCase());
       }
@@ -404,8 +416,8 @@ export default function Partida({ admin }) {
     function onKey(e) {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === 'g' || e.key === 'G') { setGrid((v) => !v); return; }
-      if (e.key === 'Escape') { setPanel(false); setChatAbierto(false); setAjustes(false); setSalir(false); return; }
-      if (verRol || acertijo || salir || desafio || resultado || fase !== 'jugando') return;
+      if (e.key === 'Escape') { setPanel(false); setChatAbierto(false); setAjustes(false); setSalir(false); setPistas(null); return; }
+      if (verRol || acertijo || pistas || salir || desafio || resultado || fase !== 'jugando') return;
       if (TECLAS[e.key] && posRef.current[userId]) {
         e.preventDefault();
         const [dx, dy] = TECLAS[e.key];
@@ -433,7 +445,7 @@ export default function Partida({ admin }) {
   const gane = resultado && !resultado.empate && resultado.equipoGanadorId === equipoId;
 
   return (
-    <div className="pm-root">
+    <div className={`pm-root ${acertijo || pistas ? 'pm-con-acertijo' : ''}`}>
       {/* ---------- MAPA ---------- */}
       <div className="pm-mapa" style={{ '--pm-aspecto': ASPECTO, '--pm-fondo': `url(${FONDO})` }}>
         {mapa && fase === 'jugando' && (
@@ -472,7 +484,7 @@ export default function Partida({ admin }) {
             <span className={`pm-chip ${conectado ? 'on' : 'off'}`}>
               <Icono nombre="mundo" /> {conectado ? 'CONECTADO' : 'RECONECTANDO'}
             </span>
-            <span className="pm-llaves"><Icono nombre="llave" /> LLAVES: {inventario.length}</span>
+            <span className="pm-llaves"><Icono nombre="llave" /> LLAVES: {inventario.filter(esLlave).length}</span>
           </div>
         </section>
         <button className="pm-cuadro pm-engranaje" onClick={() => setAjustes(!ajustes)} title="Ajustes">
@@ -515,7 +527,7 @@ export default function Partida({ admin }) {
             {inventario.length === 0 && <p className="pm-panel__vacio">AÚN NO HAN RECOGIDO NADA</p>}
             {inventario.map((o) => (
               <p key={o.id} className="pm-panel__item">
-                <Icono nombre="llave" /> {o.nombre.toUpperCase()}
+                <Icono nombre={esLlave(o) ? 'llave' : 'info'} /> {o.nombre.toUpperCase()}
                 <small>{nombreDe(o.recolectadoPor)}</small>
               </p>
             ))}
@@ -627,6 +639,10 @@ export default function Partida({ admin }) {
           onCerrar={cerrarAcertijo}
           onResuelto={acertijoResuelto}
         />
+      )}
+
+      {pistas && !acertijo && (
+        <ModalAcertijo dto={pistas} matchId={matchId} soloPistas onCerrar={() => setPistas(null)} onResuelto={() => {}} />
       )}
 
       {verRol && rol && !resultado && (

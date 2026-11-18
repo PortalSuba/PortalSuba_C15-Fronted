@@ -121,6 +121,7 @@ function Burbuja({ componente, resuelto, onInteractuar }) {
   const textos = {
     ACERTIJO: [`ACERTIJO ${n}`, resuelto ? 'RESUELTO · [E] VER' : '[E] EXAMINAR'],
     LLAVE: [`LLAVE ${n}`, '[E] RECOGER'],
+    OBJETO: ['LÁMPARA UV', '[E] RECOGER'],
     PUERTA: ['PUERTA', '[E] REVISAR'],
   }[componente.tipo];
   if (!textos) return null;
@@ -177,6 +178,14 @@ function Sprite({ tipo, resuelto }) {
             ? <path fill="#c7ff9e" d="M8 14h2v2h2v-2h2v-2h3v2h-2v2h-2v2h-3v-2H8z" />
             : <path fill="#f2c263" d="M10 10h5v1h2v2h-2v2h-2v2h-2v-3h3v-2h-4zM11 18h2v2h-2z" />}
           <path fill="#5f3b2c" d="M7 22h10v3H7z" />
+        </>
+      ) : tipo === 'OBJETO' ? (
+        <>
+          <path fill="#2a1d2e" d="M8 4h8v2h2v8h-2v4h2v6h3v6H3v-6h3v-6h2v-4H6V6h2z" />
+          <path fill="#7d2cff" d="M8 6h8v8H8z" />
+          <path fill="#c99bff" d="M10 7h3v3h-3z" />
+          <path fill="#6b5a4a" d="M9 15h6v3H9zM7 19h10v5H7zM4 25h16v3H4z" />
+          <path fill="#b14cff" opacity=".35" d="M2 2h20v14H2z" />
         </>
       ) : tipo === 'LLAVE' ? (
         <>
